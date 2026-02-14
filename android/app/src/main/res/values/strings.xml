@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DODS Ukony</string>
+    <string name="title_activity_main">DODS Ukony</string>
+    <string name="package_name">sk.dods.ukony</string>
+    <string name="custom_url_scheme">sk.dods.ukony</string>
+</resources>

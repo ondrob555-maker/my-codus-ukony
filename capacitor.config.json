@@ -1,0 +1,13 @@
+{
+  "appId": "sk.dods.ukony",
+  "appName": "DODS Ukony",
+  "webDir": "www",
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true
+    }
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

@@ -3,6 +3,6 @@ android/app/build/
 android/.gradle/
 dist/
 build/
-www/
+www_cordova/
 .DS_Store
 *.log

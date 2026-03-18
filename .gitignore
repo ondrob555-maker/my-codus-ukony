@@ -3,6 +3,7 @@ android/app/build/
 android/.gradle/
 dist/
 build/
-www_cordova/
+zaloha_jks/
+android/app/upload-keystore.jks
 .DS_Store
 *.log

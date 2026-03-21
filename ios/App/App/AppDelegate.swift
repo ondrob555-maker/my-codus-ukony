@@ -1,7 +1,6 @@
 import UIKit
 import Capacitor
 
-<<<<<<< HEAD
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
@@ -47,8 +46,4 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 
-=======
-@UIApplicationMain class AppDelegate: UIResponder, UIApplicationDelegate {
-    var window: UIWindow?
->>>>>>> 3c2f435 (update from mac)
 }

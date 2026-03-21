@@ -1,17 +1,19 @@
 PODS:
-  - Capacitor (7.5.0):
+  - Capacitor (7.6.0):
     - CapacitorCordova
   - CapacitorApp (7.1.0):
     - Capacitor
   - CapacitorBrowser (7.0.2):
     - Capacitor
-  - CapacitorCordova (7.5.0)
-  - CapacitorMlkitBarcodeScanning (7.1.0):
+  - CapacitorCordova (7.6.0)
+  - CapacitorMlkitBarcodeScanning (7.4.0):
     - Capacitor
     - GoogleMLKit/BarcodeScanning (= 7.0.0)
   - CapacitorNetwork (7.0.2):
     - Capacitor
   - CapgoCapacitorNfc (7.2.0):
+    - Capacitor
+  - ExxiliCapacitorNfc (0.0.13):
     - Capacitor
   - GoogleDataTransport (10.1.0):
     - nanopb (~> 3.30910.0)
@@ -68,6 +70,7 @@ DEPENDENCIES:
   - "CapacitorMlkitBarcodeScanning (from `../../node_modules/@capacitor-mlkit/barcode-scanning`)"
   - "CapacitorNetwork (from `../../node_modules/@capacitor/network`)"
   - "CapgoCapacitorNfc (from `../../node_modules/@capgo/capacitor-nfc`)"
+  - "ExxiliCapacitorNfc (from `../../node_modules/@exxili/capacitor-nfc`)"
 
 SPEC REPOS:
   trunk:
@@ -98,15 +101,18 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/network"
   CapgoCapacitorNfc:
     :path: "../../node_modules/@capgo/capacitor-nfc"
+  ExxiliCapacitorNfc:
+    :path: "../../node_modules/@exxili/capacitor-nfc"
 
 SPEC CHECKSUMS:
-  Capacitor: 0a78ec6b54580fa055c11744a4e83cd7942d98ca
+  Capacitor: 6e644e9e3369368ac601c77a0fad57f34b78aaa6
   CapacitorApp: 26587c2ce485d88ddb39adb21cac64f8e481afe3
   CapacitorBrowser: 22541e48442de44dc629c214388290d6eecc6ae9
-  CapacitorCordova: ae35646a9b46cfd00d637f195509c86594026aad
-  CapacitorMlkitBarcodeScanning: 8ed3b0c5b015c0f65ecdaf8d99aaa08b4e647693
+  CapacitorCordova: f163aa2e84b79efc54d6a75b305bc7e05fb80c5d
+  CapacitorMlkitBarcodeScanning: 2d4d1420f3989d6c3a3c21dac796ebb5cad499de
   CapacitorNetwork: 695069886b3c5ed514db69aa3d026b8dc3c03a6b
   CapgoCapacitorNfc: 3306447e38359522e6c1ea233aa6e84a54632534
+  ExxiliCapacitorNfc: cdef53998cdc294147418d79ab79d33262dc83c1
   GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
   GoogleMLKit: eff9e23ec1d90ea4157a1ee2e32a4f610c5b3318
   GoogleToolboxForMac: d1a2cbf009c453f4d6ded37c105e2f67a32206d8
@@ -119,6 +125,6 @@ SPEC CHECKSUMS:
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
 
-PODFILE CHECKSUM: 56dd4759b3ae08f629a6fac8544b7d63e5cda8a8
+PODFILE CHECKSUM: fbd1cec418ba400ecb65a5da18effb78b9e4d3a1
 
 COCOAPODS: 1.16.2

@@ -1,10 +1,11 @@
+
 <!DOCTYPE html>
 <html>
     <head>
         <meta http-equiv="Content-Security-Policy" content="default-src *; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'">
         <meta name="format-detection" content="telephone=no">
         <meta name="msapplication-tap-highlight" content="no">
-        <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width">
+        <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, viewport-fit=cover">
         <link rel="stylesheet" type="text/css" href="css/index.css">
         <script src="js/jquery-2.1.4.min.js"></script>
         <audio id="nfcBeep" src="img/nfc-beep.mp3" preload="auto"></audio>
@@ -30,6 +31,16 @@
         const prukony_names = [];
         var nfcLockUntil = 0; // dokedy je NFC zamknuté (ms od epoch)
 
+        function nfcDebugLog(msg) {
+            console.log('[NFC DEBUG]', msg);
+
+            var el = document.getElementById('nfcDebug');
+            if (!el) return;
+
+            el.innerHTML += msg + "<br>";
+            el.scrollTop = el.scrollHeight;
+        }
+        
 // NFC: vibra + beep (už máš – pre istotu finálna verzia)
 function canVibrate () {
     return (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function');
@@ -204,10 +215,10 @@ function saveNfc(nfcEvent) {
         cache: false,
         dataType: "text",
         success: function(datax){
-            if (datax=='ok') { 
-                alert('Karta bola úspešne zapísaná do databázy !'); 
-            } else { 
-                alert('Kartu sa nepodarilo zapísať do databázy, skúste ešte raz !'); 
+            if (datax=='ok') {
+                alert('Karta bola úspešne zapísaná do databázy !');
+            } else {
+                alert('Kartu sa nepodarilo zapísať do databázy, skúste ešte raz !');
             }
             $('#zampridelnfc').find('option').remove();
             $('#submenu').text('');
@@ -241,13 +252,23 @@ function overNfc(nfcEvent) {
 
     // nastaviť 2-minútový lock a pustiť fake NFC (idle handler)
     nfcLockUntil = now + 3000; // 3 sekundy
-    activateFakeNfcOnly();
+    //activateFakeNfcOnly();
 
     // sme na správnej obrazovke → vibra + pípnutie
     notifyNfcTagRead();
 
-    var tag = nfcEvent.tag;
-    var tagId = nfc.bytesToHexString(tag.id);
+var tag = nfcEvent.tag;
+var tagId;
+
+if (typeof tag.id === 'string') {
+    // iOS → už je to hotový HEX string
+    tagId = tag.id.trim().toLowerCase();
+    nfcDebugLog('🍏 USING STRING ID: ' + tagId);
+} else {
+    // Android → prevedieme bytes na hex
+    tagId = nfc.bytesToHexString(tag.id);
+    nfcDebugLog('🤖 USING BYTES ID: ' + tagId);
+}
     if (unicards.indexOf(tagId)>=0) {
         zamestnanec=0;
         konto=0; // senecio
@@ -266,9 +287,9 @@ function overNfc(nfcEvent) {
             cache: false,
             dataType: "text",
             success: function(datax){
-                if (datax=='fail') { 
-                    alert('Daná karta nepatrí nikomu v databáze.'); 
-                    resetnfcfing(false); 
+                if (datax=='fail') {
+                    alert('Daná karta nepatrí nikomu v databáze.');
+                    resetnfcfing(false);
                 } else {
                     datax2=datax.split('|');
                     zamestnanec=datax2[0];
@@ -302,8 +323,8 @@ function overNfc(nfcEvent) {
                     cache: false,
                     dataType: "text",
                     success: function(datax){
-                        if (datax=='fail') { 
-                            alert('Nepodarilo sa načítať neuzavreté úkony.'); 
+                        if (datax=='fail') {
+                            alert('Nepodarilo sa načítať neuzavreté úkony.');
                         } else {
                             $("#showukon_neuz").html(datax);
                         }
@@ -358,23 +379,37 @@ function overNfc(nfcEvent) {
                 });
             }
 
-            function safeExitApp() {
-              try {
-                const plugins = (window.Capacitor && (Capacitor.Plugins || {})) || {};
-                const App = plugins.App || (window.Capacitor && Capacitor.App);
+function safeExitApp() {
+  const platform = window.Capacitor?.getPlatform();
 
-                if (App && typeof App.exitApp === 'function') {
-                  App.exitApp();
-                  return;
-                }
-              } catch (e) {
-                console.log('[App] exitApp error:', e);
-              }
+  // ANDROID
+  if (platform === 'android') {
+    try {
+      const plugins = window.Capacitor?.Plugins || {};
+      const App = plugins.App;
 
-              if (navigator.app && typeof navigator.app.exitApp === 'function') {
-                navigator.app.exitApp();
-              }
-            }
+      if (App && typeof App.exitApp === 'function') {
+        App.exitApp();
+        return;
+      } else {
+        console.log('[App] Android App plugin not found');
+      }
+
+    } catch (e) {
+      console.log('[App] Android exit error:', e);
+    }
+  }
+
+  // IOS
+  if (platform === 'ios') {
+    try {
+        console.log('APP CLOSE TRIGGERED');
+        window.location.href = "#mobile-close";
+    } catch (e) {
+        console.log('[App] iOS exit error:', e);
+    }
+  }
+}
 
             $("#ukony").click(function() {
                 $("#submenu").text(' - záznamy úkonov');
@@ -860,7 +895,7 @@ $("#ukon_scan")
                                 option = document.createElement('option');
                                 option.value = '0';
                                 option.text = 'nikto nemá pridelenú kartu';
-                                select.add(option);	
+                                select.add(option);
                                 $('#showodobernfc').show();
                                 $('#clickodobernfc').hide();
                             } else {
@@ -957,7 +992,7 @@ $("#ukon_scan")
                 $('#logout').hide();
                 $("#navrat").hide();
                 $("#ukony").hide();
-                $('#zavri').hide();
+                $('#zavri').show();
                 const klienti_names = [];
                 const ukony_names = [];
                 const ukony_hodns = [];
@@ -1203,23 +1238,150 @@ $(function () {
                 }
                 return [];
             }
+            
+            function findPayload(obj) {
+              if (!obj || typeof obj !== "object") return null;
+
+              for (const key of Object.keys(obj)) {
+                const value = obj[key];
+
+                // našli sme payload
+                if (key.toUpperCase() === "PAYLOAD") {
+                  return value;
+                }
+
+                // rekurzia
+                if (typeof value === "object") {
+                  const result = findPayload(value);
+                  if (result) return result;
+                }
+              }
+
+              return null;
+            }
 
             async function ensureScanning() {
                 if (scanning) return;
                 try {
                     if (!nativeListener) {
+
+                        
                         nativeListener = await CapacitorNfc.addListener('nfcEvent', function (event) {
-                            const tag = event && event.tag ? event.tag : {};
-                            const idBytes = toByteArray(tag.id);
-                            const cordovaEvent = { tag: { id: idBytes } };
+
+                            let safeEvent;
+                            let safeRaw;
+
+                            try {
+                                safeEvent = JSON.parse(JSON.stringify(event));
+                                nfcDebugLog('SAFE EVENT OK');
+                            } catch (e) {
+                                nfcDebugLog('❌ PARSE ERROR');
+                                return;
+                            }
+
+                            nfcDebugLog('RAW: ' + JSON.stringify(safeEvent));
+
+
+let idBytes = null;
+let finalValue = null;
+let finalId;
+
+// ✅ ANDROID UID
+if (safeEvent && safeEvent.tag && safeEvent.tag.id) {
+    idBytes = safeEvent.tag.id;
+    nfcDebugLog('✅ ANDROID UID FOUND');
+
+    let hex = '';
+
+    for (let i = 0; i < idBytes.length; i++) {
+        let h = (idBytes[i] & 0xff).toString(16);
+        if (h.length === 1) h = '0' + h;
+        hex += h;
+    }
+
+    finalValue = hex;
+    nfcDebugLog('🎯 ANDROID HEX: ' + hex);
+}
+
+
+// 🍏 iOS – NDEF TEXT (FIXED ACCESS)
+if (!finalValue) {
+  const payload = findPayload(event);
+
+  if (payload && payload.length) {
+      try {
+          const bytes = new Uint8Array(payload);
+          const langLength = bytes[0];
+          const textBytes = bytes.slice(1 + langLength);
+
+          const text = new TextDecoder().decode(textBytes);
+
+          nfcDebugLog('🍏 iOS TEXT: ' + text);
+
+          const sendtoEvent = {
+              tag: {
+                  id: text
+              }
+          };
+
+          nfcDebugLog('➡️ SENDING iOS TEXT');
+
+          activeCallbacks.forEach(function (cb) {
+              try {
+                  cb(sendtoEvent);
+              } catch (e) {
+                  nfcDebugLog('❌ CALLBACK ERROR');
+              }
+          });
+
+          return; // 🔥 DÔLEŽITÉ – zastaví ďalší kód
+      } catch (e) {
+          nfcDebugLog('❌ iOS decode error');
+      }
+ } else {
+      const now = Date.now();
+
+      // ochrana proti spamovaniu alertu
+      if (nfcLockUntil && now < nfcLockUntil) {
+          return;
+      }
+
+      // nastav lock napr. 3 sekundy
+      nfcLockUntil = now + 3000;
+
+      alert('Karta neobsahuje dáta (NDEF) potrebné pre IOS. Použite inú kartu alebo kontaktujte technickú podporu.');
+
+      return;
+  }
+}
+
+if (idBytes && idBytes.length) {
+
+    nfcDebugLog('📦 UID BYTES: ' + JSON.stringify(idBytes));
+
+    finalId = idBytes;
+
+} else {
+    nfcDebugLog('❌ NO ID FOUND');
+    return;
+}
+
+                            const sendtoEvent = {
+                                tag: {
+                                    id: finalId
+                                }
+                            };
+
+                            nfcDebugLog('➡️ SENDING TO APP');
 
                             activeCallbacks.forEach(function (cb) {
                                 try {
-                                    cb(cordovaEvent);
+                                    cb(sendtoEvent);
                                 } catch (e) {
-                                    console.error('[NFC] callback exception', e);
+                                    nfcDebugLog('❌ CALLBACK ERROR');
                                 }
                             });
+
                         });
                     }
 
@@ -1358,8 +1520,9 @@ $(function () {
                 }
             };
         })();
-
-        </script>
+        
+        console.log('Plugins:', Capacitor.Plugins);
+    </script>
 
         <style>
         html, body {
@@ -1367,6 +1530,26 @@ $(function () {
             margin:0px;
             font-family:Lucida Sans Unicode;
             color: #394A52;
+        }
+        body {
+            padding-top: constant(safe-area-inset-top); /* Pre staršie iOS */
+            padding-top: env(safe-area-inset-top); /* Pre novšie iOS a Android */
+            padding-bottom: constant(safe-area-inset-bottom);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        body.capacitor-mobile {
+            padding-top: var(--ion-safe-area-top);
+            padding-bottom: var(--ion-safe-area-bottom);
+        }
+        /* Pre fixné hlavičky/pätičky */
+        .header {
+          padding-top: constant(safe-area-inset-top);
+          padding-top: env(safe-area-inset-top);
+        }
+
+        .footer {
+          padding-bottom: constant(safe-area-inset-bottom);
+          padding-bottom: env(safe-area-inset-bottom);
         }
         select, input {
             padding: 10px;
@@ -1429,6 +1612,19 @@ $(function () {
                 </span>
                 <span id='loaddata'></span>
             </h2>
+            
+            <div id="nfcDebug" style="
+                display:none;
+                background:#000;
+                color:#0f0;
+                font-size:12px;
+                padding:10px;
+                margin:10px;
+                text-align:left;
+                max-height:150px;
+                overflow:auto;">
+                NFC DEBUG:<br>
+            </div>
 
             <div align='center' id='loggedbutton' class='buttons'>
                 <span id='overidentituOFF'>Senzory karty neaktívne</span>
@@ -1507,7 +1703,7 @@ $(function () {
             <div align='center' class='buttons'>
                 <button id='navrat' style='display:none;'>Návrat</button>
                 <button id='logout' style='display:none;'>Odhlás</button>
-                <button id='zavri' style='display:none;'>Zavri</button>
+                <button id='zavri'>Zavri</button>
             </div>
 
             <div style='position:absolute;bottom:10px;right:10px;display:none;'>
@@ -1521,3 +1717,4 @@ $(function () {
         <script src="js/index.js"></script>
     </body>
 </html>
+

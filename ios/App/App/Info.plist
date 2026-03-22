@@ -47,5 +47,7 @@
 	<true/>
     <key>NFCReaderUsageDescription</key>
     <string>Používame NFC na čítanie kariet</string>
+    <key>NSCameraUsageDescription</key>
+    <string>Aplikácia používa kameru na skenovanie čiarových kódov.</string>
 </dict>
 </plist>

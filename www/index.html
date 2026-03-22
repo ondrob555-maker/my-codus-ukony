@@ -277,7 +277,7 @@ if (typeof tag.id === 'string') {
         $('#loggedbutton').hide();
         $('#managebutton').hide();
         $('#logout').show();
-        $('#zavri').show();
+        //$('#zavri').show();
         allStop();
     } else {
         $.ajax({
@@ -301,7 +301,7 @@ if (typeof tag.id === 'string') {
                     if (datax2[9]=='1') { app_ukony=1; } else { app_ukony=0; }
                     if (datax2[2]=='1' && datax2[9]=='0') { $('#managebutton').click(); }
                     if (datax2[9]=='1') { $("#ukony").click(); $('input:radio[name=offline]').filter('[value=0]').prop('checked', true); }
-                    if (datax2[7]=='1') { $("#zavri").show(); app_off=1; } else { app_off=0; }
+                    //if (datax2[7]=='1') { $("#zavri").show(); app_off=1; } else { app_off=0; }
                     allStop();
                 }
             },
@@ -379,43 +379,29 @@ if (typeof tag.id === 'string') {
                 });
             }
 
-function safeExitApp() {
-  const platform = window.Capacitor?.getPlatform();
+            function safeExitApp() {
+              try {
+                const plugins = (window.Capacitor && (Capacitor.Plugins || {})) || {};
+                const App = plugins.App || (window.Capacitor && Capacitor.App);
 
-  // ANDROID
-  if (platform === 'android') {
-    try {
-      const plugins = window.Capacitor?.Plugins || {};
-      const App = plugins.App;
+                if (App && typeof App.exitApp === 'function') {
+                  App.exitApp();
+                  return;
+                }
+              } catch (e) {
+                console.log('[App] exitApp error:', e);
+              }
 
-      if (App && typeof App.exitApp === 'function') {
-        App.exitApp();
-        return;
-      } else {
-        console.log('[App] Android App plugin not found');
-      }
-
-    } catch (e) {
-      console.log('[App] Android exit error:', e);
-    }
-  }
-
-  // IOS
-  if (platform === 'ios') {
-    try {
-        console.log('APP CLOSE TRIGGERED');
-        window.location.href = "#mobile-close";
-    } catch (e) {
-        console.log('[App] iOS exit error:', e);
-    }
-  }
-}
+              if (navigator.app && typeof navigator.app.exitApp === 'function') {
+                navigator.app.exitApp();
+              }
+            }
 
             $("#ukony").click(function() {
                 $("#submenu").text(' - záznamy úkonov');
                 $('#showoffline').show();
                 $('#managebutton').hide();
-                $('#zavri').hide();
+                //$('#zavri').hide();
                 $('#ukony').hide();
                 $('#logout').hide();
                 $(".ukon_hodnotabr").hide();
@@ -432,7 +418,7 @@ function safeExitApp() {
                 $("#submenu").text(' - správa prístupov');
                 $('#showoffline').hide();
                 $('#managebutton').hide();
-                $('#zavri').hide();
+                //$('#zavri').hide();
                 $('#ukony').hide();
                 $('#logout').hide();
                 $("#showmanagebutton").show();
@@ -951,7 +937,7 @@ $("#ukon_scan")
                 $("#submenu").text('');
                 $('#showoffline').hide();
                 if (app_manage==1) { $('#managebutton').show(); }
-                if (app_off==1) { $('#zavri').show(); }
+                //if (app_off==1) { $('#zavri').show(); }
                 if (app_ukony==1) { $('#ukony').show(); }
                 $('#showmanagebutton').hide();
                 $('#showukony').hide();
@@ -992,7 +978,7 @@ $("#ukon_scan")
                 $('#logout').hide();
                 $("#navrat").hide();
                 $("#ukony").hide();
-                $('#zavri').show();
+                //$('#zavri').hide();
                 const klienti_names = [];
                 const ukony_names = [];
                 const ukony_hodns = [];
@@ -1160,7 +1146,7 @@ $(function () {
                         if (datax2[9] == '1') { app_ukony = 1; } else { app_ukony = 0; }
                         if (datax2[2] == '1' && datax2[9] == '0') { $('#managebutton').click(); }
                         if (datax2[9] == '1') { $("#ukony").click(); $('input:radio[name=offline]').filter('[value=0]').prop('checked', true); }
-                        if (datax2[7] == '1') { $("#zavri").show(); app_off = 1; } else { app_off = 0; }
+                        //if (datax2[7] == '1') { $("#zavri").show(); app_off = 1; } else { app_off = 0; }
                         allStop();
                     },
                     error: function () {
@@ -1703,7 +1689,6 @@ if (idBytes && idBytes.length) {
             <div align='center' class='buttons'>
                 <button id='navrat' style='display:none;'>Návrat</button>
                 <button id='logout' style='display:none;'>Odhlás</button>
-                <button id='zavri'>Zavri</button>
             </div>
 
             <div style='position:absolute;bottom:10px;right:10px;display:none;'>

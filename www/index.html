@@ -315,6 +315,7 @@ if (typeof tag.id === 'string') {
 
 
             function loadukonneuz() {
+                if (!$("#showukon_neuz").is(":visible")) {return;};
                 $("#showukon_neuz").html('<br><b>Načítavam...</b>');
                 $.ajax({
                     type: "POST",
@@ -403,7 +404,7 @@ if (typeof tag.id === 'string') {
                 $('#managebutton').hide();
                 //$('#zavri').hide();
                 $('#ukony').hide();
-                $('#logout').hide();
+                //$('#logout').hide();
                 $(".ukon_hodnotabr").hide();
                 $("#ukon_hodnota1").hide();
                 $("#ukon_hodnotalom").hide();
@@ -411,7 +412,7 @@ if (typeof tag.id === 'string') {
                 $("#ukon_hodnota_zapis").hide();
                 $('#showukony').show();
                 $("input[name=offline][value=0]").prop('checked', true);
-                $("#navrat").show();
+                //$("#navrat").show();
             });
 
             $("#managebutton").click(function() {
@@ -420,13 +421,13 @@ if (typeof tag.id === 'string') {
                 $('#managebutton').hide();
                 //$('#zavri').hide();
                 $('#ukony').hide();
-                $('#logout').hide();
+                //$('#logout').hide();
                 $("#showmanagebutton").show();
                 $("#showpridelnfc").hide();
                 $("#showodobernfc").hide();
                 $("#pridelnfc").show();
                 $("#odobernfc").show();
-                $("#navrat").show();
+                //$("#navrat").show();
             });
 
             $("#ukon_neuz").click(function() {
@@ -435,7 +436,7 @@ if (typeof tag.id === 'string') {
                 $("#ukon_hodnotalom").hide();
                 $("#ukon_hodnota2").hide();
                 $("#ukon_hodnota_zapis").hide();
-                $("#showukon_neuz").show();
+                $("#showukon_neuz").toggle();
                 loadukonneuz();
             });
 
@@ -976,7 +977,7 @@ $("#ukon_scan")
                 $('#showukony').hide();
                 $('#showmanagebutton').hide();
                 $('#logout').hide();
-                $("#navrat").hide();
+                //$("#navrat").hide();
                 $("#ukony").hide();
                 //$('#zavri').hide();
                 const klienti_names = [];
@@ -1687,7 +1688,6 @@ if (idBytes && idBytes.length) {
             </div>
 
             <div align='center' class='buttons'>
-                <button id='navrat' style='display:none;'>Návrat</button>
                 <button id='logout' style='display:none;'>Odhlás</button>
             </div>
 
@@ -1702,4 +1702,5 @@ if (idBytes && idBytes.length) {
         <script src="js/index.js"></script>
     </body>
 </html>
+
 

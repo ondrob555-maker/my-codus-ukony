@@ -126,6 +126,40 @@ function getBarcodeScannerPlugin() {
 
 
         window.onload = function() {
+            const APP_VERSION =
+                    '1.1.2-fix-time(ukony)';
+
+            $.ajaxSetup({
+              data: {
+                app_source: 'capacitor',
+                app_version: APP_VERSION
+              }
+            });
+
+            $.ajaxPrefilter(function(options) {
+
+              if (
+                options.type &&
+                options.type.toUpperCase() === 'POST'
+              ) {
+
+                if (typeof options.data === 'string') {
+
+                  options.data +=
+                    '&app_source=capacitor'
+                    + '&app_version='
+                    + encodeURIComponent(APP_VERSION);
+
+                } else {
+
+                  options.data = options.data || {};
+
+                  options.data.app_source = 'capacitor';
+                  options.data.app_version = APP_VERSION;
+                }
+              }
+            });           
+            
             var unicards=['0463e532093c80'];
 
             // ===== idle handler + fake NFC režim (ako v my-dods-strava) =====

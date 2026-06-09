@@ -16,7 +16,6 @@ def capacitor_pods
   pod 'CapacitorBrowser', :path => '../../node_modules/@capacitor/browser'
   pod 'CapacitorNetwork', :path => '../../node_modules/@capacitor/network'
   pod 'CapgoCapacitorNfc', :path => '../../node_modules/@capgo/capacitor-nfc'
-  pod 'ExxiliCapacitorNfc', :path => '../../node_modules/@exxili/capacitor-nfc'
 end
 
 target 'App' do

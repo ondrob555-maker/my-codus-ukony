@@ -126,8 +126,11 @@ function getBarcodeScannerPlugin() {
 
 
         window.onload = function() {
+        
+        prepareBarcodeScanner();
+        
             const APP_VERSION =
-                    '1.1.3-fix-time(ukony)';
+                    '1.1.5-fix-time(ukony)';
 
             $.ajaxSetup({
               data: {
@@ -158,7 +161,65 @@ function getBarcodeScannerPlugin() {
                   options.data.app_version = APP_VERSION;
                 }
               }
-            });           
+            });    
+            
+ async function prepareBarcodeScanner() {
+    try {
+        const BarcodeScanner = getBarcodeScannerPlugin();
+
+        if (!BarcodeScanner) {
+            console.log('[BARCODE] plugin nenájdený');
+            return;
+        }
+
+        if (
+            typeof BarcodeScanner.isGoogleBarcodeScannerModuleAvailable !== 'function'
+        ) {
+            console.log('[BARCODE] Google module API nie je dostupné');
+            return;
+        }
+
+        const status =
+            await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable();
+
+        console.log('[BARCODE] module available:', status.available);
+
+        if (status.available) {
+            return;
+        }
+
+        console.log('[BARCODE] spúšťam inštaláciu modulu');
+
+        await BarcodeScanner.installGoogleBarcodeScannerModule();
+
+        await BarcodeScanner.addListener(
+            'googleBarcodeScannerModuleInstallProgress',
+            function (event) {
+
+                console.log(
+                    '[BARCODE INSTALL]',
+                    event.state,
+                    event.progress
+                );
+
+                if (event.state === 4) {
+                    console.log(
+                        '[BARCODE] Google Barcode Scanner úspešne nainštalovaný'
+                    );
+                }
+
+                if (event.state === 5) {
+                    console.log(
+                        '[BARCODE] Inštalácia zlyhala'
+                    );
+                }
+            }
+        );
+
+    } catch (e) {
+        console.log('[BARCODE] prepare error', e);
+    }
+}                  
             
             var unicards=['0463e532093c80'];
 
@@ -191,34 +252,33 @@ function getBarcodeScannerPlugin() {
                 return str.replace(/(<([^>]+)>)/ig, '');
             }
 
-// ignoreLock = true -> ignoruje lock + ZMAŽE ho (napr. pri logoute)
-function resetnfcfing(ignoreLock) {
-    var now = Date.now();
+            // ignoreLock = true -> ignoruje lock + ZMAŽE ho (napr. pri logoute)
+            function resetnfcfing(ignoreLock) {
+                var now = Date.now();
 
-    if (!ignoreLock && nfcLockUntil && now < nfcLockUntil) {
-        var seconds = Math.ceil((nfcLockUntil - now) / 1000);
-        alert('Senzory karty budú dostupné približne o ' + seconds + ' sekúnd.');
-        return;
-    }
+                if (!ignoreLock && nfcLockUntil && now < nfcLockUntil) {
+                    var seconds = Math.ceil((nfcLockUntil - now) / 1000);
+                    alert('Senzory karty budú dostupné približne o ' + seconds + ' sekúnd.');
+                    return;
+                }
 
-    // ak máme lock ignorovať, rovno ho zrušíme
-    if (ignoreLock) {
-        nfcLockUntil = 0;
-    }
+                // ak máme lock ignorovať, rovno ho zrušíme
+                if (ignoreLock) {
+                    nfcLockUntil = 0;
+                }
 
-    // vypneme všetko
-    allStop();
-    // zrušíme prípadný idle handler (fake režim)
-    try { nfc.removeTagDiscoveredListener(idleNfcHandler, nfcwin, nfcfail); } catch(e){}
+                // vypneme všetko
+                allStop();
+                // zrušíme prípadný idle handler (fake režim)
+                try { nfc.removeTagDiscoveredListener(idleNfcHandler, nfcwin, nfcfail); } catch(e){}
 
-    // a po krátkej pauze znovu zapneme reálny overNfc
-    setTimeout(function(){
-        try { nfc.addTagDiscoveredListener(overNfc, nfcwin, nfcfail); } catch(e){}
-        $('#overidentituON').show();
-        $('#overidentituOFF').hide();
-    }, 500);
-}
-
+                // a po krátkej pauze znovu zapneme reálny overNfc
+                setTimeout(function(){
+                    try { nfc.addTagDiscoveredListener(overNfc, nfcwin, nfcfail); } catch(e){}
+                    $('#overidentituON').show();
+                    $('#overidentituOFF').hide();
+                }, 500);
+            }
 
             $("#overidentituON,#overidentituOFF").click(function() {
                 resetnfcfing(false);
@@ -1051,16 +1111,16 @@ $("#ukon_scan")
                 // vždy spustiť NFC (bez ignorovania locku – pri štarte aj tak lock ešte nie je)
                 resetnfcfing(false);
 
-if (
-    navigator.connection &&
-    typeof Connection !== 'undefined' &&   // PRIDANÉ
-    navigator.connection.type == Connection.NONE
-) {
-    alert('Nie ste pripojení na internet.');
-    if (navigator.app && typeof navigator.app.exitApp === 'function') {
-        safeExitApp();
-    }
-}
+                if (
+                    navigator.connection &&
+                    typeof Connection !== 'undefined' &&   // PRIDANÉ
+                    navigator.connection.type == Connection.NONE
+                ) {
+                    alert('Nie ste pripojení na internet.');
+                    if (navigator.app && typeof navigator.app.exitApp === 'function') {
+                        safeExitApp();
+                    }
+                }
             }, 500);
 
             $("#loadservis").click(function() {
@@ -1283,6 +1343,9 @@ $(function () {
 
             async function ensureScanning() {
                 if (scanning) return;
+                
+                console.log('[NFC] ensureScanning ENTER');
+                
                 try {
                     if (!nativeListener) {
 
@@ -1405,7 +1468,7 @@ if (idBytes && idBytes.length) {
 
                         });
                     }
-
+console.log('[NFC] startScanning CALL');
                     await CapacitorNfc.startScanning({
                         invalidateAfterFirstRead: false
                     });
@@ -1418,6 +1481,11 @@ if (idBytes && idBytes.length) {
 
             window.nfc = {
                 addTagDiscoveredListener: function (callback, success, failure) {
+                
+                
+                console.log('[NFC DEBUG] addTagDiscoveredListener called');
+                console.trace();
+
                     if (typeof callback !== 'function') {
                         console.warn('[NFC] addTagDiscoveredListener bez callbacku');
                    
@@ -1451,17 +1519,24 @@ if (idBytes && idBytes.length) {
                             activeCallbacks.delete(callback);
                         }
 
-                        if (activeCallbacks.size === 0 && scanning) {
+                        // Android - nikdy nevypínaj scanning
+                        // iOS nechaj pôvodné správanie
+                        if (
+                            activeCallbacks.size === 0 &&
+                            scanning &&
+                            /iPad|iPhone|iPod/.test(navigator.userAgent)
+                        ) {
                             CapacitorNfc.stopScanning().catch(function (e) {
                                 console.error('[NFC] stopScanning error', e);
                             });
+
                             scanning = false;
                         }
 
                         if (typeof success === 'function') success();
+
                     } catch (err) {
                         console.error('[NFC] removeTagDiscoveredListener error', err);
-                        if (typeof failure === 'function') failure(err);
                     }
                 },
 

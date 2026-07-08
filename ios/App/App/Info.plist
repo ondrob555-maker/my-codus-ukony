@@ -51,5 +51,7 @@
 	<string>Aplikácia používa kameru na skenovanie čiarových kódov.</string>
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>Aplikácia potrebuje uložiť obrázky do galérie.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Aplikácia potrebuje prístup k fotografiám, aby si používateľ mohol vybrať obrázok.</string>
 </dict>
 </plist>

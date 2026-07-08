@@ -49,5 +49,7 @@
 	<string>Používame NFC na čítanie kariet</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Aplikácia používa kameru na skenovanie čiarových kódov.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Aplikácia potrebuje uložiť obrázky do galérie.</string>
 </dict>
 </plist>

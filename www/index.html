@@ -16,6 +16,7 @@
     </head>
     <body>
         <script>
+        const isIOS = window.Capacitor && Capacitor.getPlatform() === 'ios';
         var konto=0;
         var first=1;
         var app_manage=0;
@@ -129,8 +130,8 @@ function getBarcodeScannerPlugin() {
         
         prepareBarcodeScanner();
         
-            const APP_VERSION =
-                    '1.1.5-fix-time(ukony)';
+            let APP_VERSION = '1.1.6(ukony)';
+            if (isIOS) APP_VERSION = '1.1.3(ukony)-ios';
 
             $.ajaxSetup({
               data: {

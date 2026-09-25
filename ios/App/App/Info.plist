@@ -1,11 +1,11 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>DODS Ukony</string>
+	<string>CODUS Ukony</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -46,12 +46,13 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<key>NFCReaderUsageDescription</key>
-	<string>Používame NFC na čítanie kariet</string>
+	<string>PouĹľĂ­vame NFC na ÄŤĂ­tanie kariet</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Aplikácia používa kameru na skenovanie čiarových kódov.</string>
+	<string>AplikĂˇcia pouĹľĂ­va kameru na skenovanie ÄŤiarovĂ˝ch kĂłdov.</string>
     <key>NSPhotoLibraryAddUsageDescription</key>
-    <string>Aplikácia potrebuje uložiť obrázky do galérie.</string>
+    <string>AplikĂˇcia potrebuje uloĹľiĹĄ obrĂˇzky do galĂ©rie.</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>Aplikácia potrebuje prístup k fotografiám, aby si používateľ mohol vybrať obrázok.</string>
+    <string>AplikĂˇcia potrebuje prĂ­stup k fotografiĂˇm, aby si pouĹľĂ­vateÄľ mohol vybraĹĄ obrĂˇzok.</string>
 </dict>
 </plist>
+

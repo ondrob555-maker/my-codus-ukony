@@ -1,6 +1,6 @@
 {
-  "appId": "sk.dods.ukony",
-  "appName": "DODS Ukony",
+  "appId": "sk.codus.ukony",
+  "appName": "CODUS Ukony",
   "webDir": "www",
   "plugins": {
     "SplashScreen": {

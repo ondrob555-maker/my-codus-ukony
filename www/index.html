@@ -1,4 +1,4 @@
-
+﻿
 <!DOCTYPE html>
 <html>
     <head>
@@ -12,10 +12,24 @@
         <!-- cordova.js ZÁMERNE NEPOUŽÍVAME -->
         <meta http-equiv="Content-Language" content="sk">
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-        <title>DODS záznamy úkonov</title>
+        <title>CODUS Rejestr czynności</title>
     </head>
     <body>
         <script>
+        const DEBUG_ENABLED = false;
+
+        window.debugConsole = function () {
+          if (!DEBUG_ENABLED) return;
+
+          try {
+            console.log.apply(console, arguments);
+          } catch (e) {}
+        };
+
+        var debugConsole = window.debugConsole;
+
+        debugConsole('APP INIT');
+  
         const isIOS = window.Capacitor && Capacitor.getPlatform() === 'ios';
         var konto=0;
         var first=1;
@@ -33,7 +47,7 @@
         var nfcLockUntil = 0; // dokedy je NFC zamknuté (ms od epoch)
 
         function nfcDebugLog(msg) {
-            console.log('[NFC DEBUG]', msg);
+            debugConsole('[NFC DEBUG]', msg);
 
             var el = document.getElementById('nfcDebug');
             if (!el) return;
@@ -42,96 +56,96 @@
             el.scrollTop = el.scrollHeight;
         }
         
-// NFC: vibra + beep (už máš – pre istotu finálna verzia)
-function canVibrate () {
-    return (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function');
-}
-
-function notifyNfcTagRead () {
-    console.log('[NFC] TAG READ');
-
-    try {
-        if (canVibrate()) {
-            navigator.vibrate(200);
+        // NFC: vibra + beep (už máš – pre istotu finálna verzia)
+        function canVibrate () {
+            return (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function');
         }
-    } catch (e) {
-        console.log('[NFC] vibrácia chyba', e);
-    }
 
-    try {
-        var beep = document.getElementById('nfcBeep');
-        if (beep && typeof beep.play === 'function') {
-            beep.currentTime = 0;
-            beep.play().catch(function(){});
-        }
-    } catch (e) {
-        console.log('[NFC] beep chyba', e);
-    }
-}
+        function notifyNfcTagRead () {
+            debugConsole('[NFC] TAG READ');
 
-// NFC smie fungovať iba na login + Prideľ kartu
-function isNfcAllowedForOver() {
-    // Login obrazovka: panel s kódom + text "Priložte kartu"
-    // (= sme na úvodnej obrazovke, kde je #loggedbutton a text s #overidentituON)
-    return (
-        $('#loggedbutton').is(':visible') &&
-        $('#overidentituON').is(':visible')
-    );
-}
-
-function isNfcAllowedForSave() {
-    // Prideľ kartu: sme v správe prístupov a otvorený blok na priraďovanie karty
-    // -> toto *úmyselne* NEplatí pre "Odober kartu"
-    return (
-        $('#showmanagebutton').is(':visible') &&
-        $('#showpridelnfc').is(':visible')
-    );
-}
-
-function getBarcodeScannerPlugin() {
-    const cap = (window.Capacitor && window.Capacitor.Plugins) || {};
-    if (cap.BarcodeScanner) {
-        return cap.BarcodeScanner;
-    }
-
-    // fallback: ak je k dispozícii pôvodný cordovský plugin
-    if (window.cordova && window.cordova.plugins && window.cordova.plugins.barcodeScanner) {
-        return {
-            // zrýchlený wrapper, aby sme mali async/await
-            async scan() {
-                return new Promise(function (resolve, reject) {
-                    window.cordova.plugins.barcodeScanner.scan(
-                        function (res) {
-                            // prevedieme na podobný tvar ako Capacitor
-                            if (res && !res.cancelled) {
-                                resolve({ barcodes: [{ rawValue: res.text }] });
-                            } else {
-                                resolve({ barcodes: [] });
-                            }
-                        },
-                        function (err) {
-                            reject(err);
-                        }
-                    );
-                });
-            },
-            async requestPermissions() {
-                // pôvodný cordovský plugin nemal requestPermissions -> tvárime sa že povolené
-                return { camera: "granted" };
+            try {
+                if (canVibrate()) {
+                    navigator.vibrate(200);
+                }
+            } catch (e) {
+                debugConsole('[NFC] vibrácia chyba', e);
             }
-        };
-    }
 
-    return null;
-}
+            try {
+                var beep = document.getElementById('nfcBeep');
+                if (beep && typeof beep.play === 'function') {
+                    beep.currentTime = 0;
+                    beep.play().catch(function(){});
+                }
+            } catch (e) {
+                debugConsole('[NFC] beep chyba', e);
+            }
+        }
+
+        // NFC smie fungovať iba na login + Przypisz kartę
+        function isNfcAllowedForOver() {
+            // Login obrazovka: panel s kódom + text "Przyłóż kartę"
+            // (= sme na úvodnej obrazovke, kde je #loggedbutton a text s #overidentituON)
+            return (
+                $('#loggedbutton').is(':visible') &&
+                $('#overidentituON').is(':visible')
+            );
+        }
+
+        function isNfcAllowedForSave() {
+            // Przypisz kartę: sme v správe prístupov a otvorený blok na priraďovanie karty
+            // -> toto *úmyselne* NEplatí pre "Usuń kartę"
+            return (
+                $('#showmanagebutton').is(':visible') &&
+                $('#showpridelnfc').is(':visible')
+            );
+        }
+
+        function getBarcodeScannerPlugin() {
+            const cap = (window.Capacitor && window.Capacitor.Plugins) || {};
+            if (cap.BarcodeScanner) {
+                return cap.BarcodeScanner;
+            }
+
+            // fallback: ak je k dispozícii pôvodný cordovský plugin
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.barcodeScanner) {
+                return {
+                    // zrýchlený wrapper, aby sme mali async/await
+                    async scan() {
+                        return new Promise(function (resolve, reject) {
+                            window.cordova.plugins.barcodeScanner.scan(
+                                function (res) {
+                                    // prevedieme na podobný tvar ako Capacitor
+                                    if (res && !res.cancelled) {
+                                        resolve({ barcodes: [{ rawValue: res.text }] });
+                                    } else {
+                                        resolve({ barcodes: [] });
+                                    }
+                                },
+                                function (err) {
+                                    reject(err);
+                                }
+                            );
+                        });
+                    },
+                    async requestPermissions() {
+                        // pôvodný cordovský plugin nemal requestPermissions -> tvárime sa že povolené
+                        return { camera: "granted" };
+                    }
+                };
+            }
+
+            return null;
+        }
 
 
         window.onload = function() {
         
         prepareBarcodeScanner();
         
-            let APP_VERSION = '1.1.6(ukony)';
-            if (isIOS) APP_VERSION = '1.1.3(ukony)-ios';
+            let APP_VERSION = '1.0.0(codus-ukony)';
+            if (isIOS) APP_VERSION = '1.0.0(codus-ukony)-ios';
 
             $.ajaxSetup({
               data: {
@@ -164,73 +178,73 @@ function getBarcodeScannerPlugin() {
               }
             });    
             
- async function prepareBarcodeScanner() {
-    try {
-        const BarcodeScanner = getBarcodeScannerPlugin();
+           async function prepareBarcodeScanner() {
+              try {
+                  const BarcodeScanner = getBarcodeScannerPlugin();
 
-        if (!BarcodeScanner) {
-            console.log('[BARCODE] plugin nenájdený');
-            return;
-        }
+                  if (!BarcodeScanner) {
+                      debugConsole('[BARCODE] plugin nenájdený');
+                      return;
+                  }
 
-        if (
-            typeof BarcodeScanner.isGoogleBarcodeScannerModuleAvailable !== 'function'
-        ) {
-            console.log('[BARCODE] Google module API nie je dostupné');
-            return;
-        }
+                  if (
+                      typeof BarcodeScanner.isGoogleBarcodeScannerModuleAvailable !== 'function'
+                  ) {
+                      debugConsole('[BARCODE] Google module API nie je dostupné');
+                      return;
+                  }
 
-        const status =
-            await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable();
+                  const status =
+                      await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable();
 
-        console.log('[BARCODE] module available:', status.available);
+                  debugConsole('[BARCODE] module available:', status.available);
 
-        if (status.available) {
-            return;
-        }
+                  if (status.available) {
+                      return;
+                  }
 
-        console.log('[BARCODE] spúšťam inštaláciu modulu');
+                  debugConsole('[BARCODE] spúšťam inštaláciu modulu');
 
-        await BarcodeScanner.installGoogleBarcodeScannerModule();
+                  await BarcodeScanner.installGoogleBarcodeScannerModule();
 
-        await BarcodeScanner.addListener(
-            'googleBarcodeScannerModuleInstallProgress',
-            function (event) {
+                  await BarcodeScanner.addListener(
+                      'googleBarcodeScannerModuleInstallProgress',
+                      function (event) {
 
-                console.log(
-                    '[BARCODE INSTALL]',
-                    event.state,
-                    event.progress
-                );
+                          debugConsole(
+                              '[BARCODE INSTALL]',
+                              event.state,
+                              event.progress
+                          );
 
-                if (event.state === 4) {
-                    console.log(
-                        '[BARCODE] Google Barcode Scanner úspešne nainštalovaný'
-                    );
-                }
+                          if (event.state === 4) {
+                              debugConsole(
+                                  '[BARCODE] Google Barcode Scanner úspešne nainštalovaný'
+                              );
+                          }
 
-                if (event.state === 5) {
-                    console.log(
-                        '[BARCODE] Inštalácia zlyhala'
-                    );
-                }
-            }
-        );
+                          if (event.state === 5) {
+                              debugConsole(
+                                  '[BARCODE] Inštalácia zlyhala'
+                              );
+                          }
+                      }
+                  );
 
-    } catch (e) {
-        console.log('[BARCODE] prepare error', e);
-    }
-}                  
+              } catch (e) {
+                  debugConsole('[BARCODE] prepare error', e);
+              }
+          }                  
             
             var unicards=['0463e532093c80'];
 
-            // ===== idle handler + fake NFC režim (ako v my-dods-strava) =====
+            // ===== idle handler + fake NFC režim (ako v my-codus-strava) =====
             function idleNfcHandler (nfcEvent) {
-                console.log('[NFC] idle handler – tag ignorovaný', nfcEvent);
+                debugConsole('[NFC] idle handler – tag ignorovaný', nfcEvent);
             }
 
             function activateFakeNfcOnly () {
-                console.log('[NFC] Fake režim – ponechávam len idleNfcHandler');
+                debugConsole('[NFC] Fake režim – ponechávam len idleNfcHandler');
 
                 // Zrušíme všetky "skutočné" NFC handlery
                 try { nfc.removeTagDiscoveredListener(overNfc, nfcwin, nfcfail); } catch(e){}
@@ -259,7 +273,7 @@ function getBarcodeScannerPlugin() {
 
                 if (!ignoreLock && nfcLockUntil && now < nfcLockUntil) {
                     var seconds = Math.ceil((nfcLockUntil - now) / 1000);
-                    alert('Senzory karty budú dostupné približne o ' + seconds + ' sekúnd.');
+                    alert('Czytnik kart będzie dostępny za około ' + seconds + ' sekund.');
                     return;
                 }
 
@@ -291,142 +305,141 @@ function getBarcodeScannerPlugin() {
                 $('#overidentituON').hide();
             }
 
-function saveNfc(nfcEvent) {
-    // 🔒 Povolené len na obrazovke "Prideľ kartu"
-    if (!isNfcAllowedForSave()) {
-        console.log('[NFC] Tag ignorovaný – saveNfc mimo obrazovky Prideľ kartu', nfcEvent);
-        return;
-    }
-
-    // sme v režime Prideľ kartu → vibra + pípnutie
-    notifyNfcTagRead();
-
-    var tag = nfcEvent.tag;
-    var tagId = nfc.bytesToHexString(tag.id);
-    $.ajax({
-        type: "POST",
-        url:  "https://dods.sk/app_load.php",
-        data: { co: 'add_nfc', kto: $('#zampridelnfc').val(), kod: tagId },
-        cache: false,
-        dataType: "text",
-        success: function(datax){
-            if (datax=='ok') {
-                alert('Karta bola úspešne zapísaná do databázy !');
-            } else {
-                alert('Kartu sa nepodarilo zapísať do databázy, skúste ešte raz !');
-            }
-            $('#zampridelnfc').find('option').remove();
-            $('#submenu').text('');
-            $('#showoffline').hide();
-            $("#pridelnfc").show();
-            $("#odobernfc").show();
-            console.log('[NFC] Odobernfc visible is:', $("#odobernfc").is(":visible"));
-            $('#showpridelnfc').hide();
-            nfc.removeTagDiscoveredListener(saveNfc, nfcwin, nfcfail);
-        },
-        error: function(datax){
-            alert("Chyba: pravdepodobne nie ste pripojení na internet");
-            nfc.removeTagDiscoveredListener(saveNfc, nfcwin, nfcfail);
-        }
-    });
-}
-
-
-function overNfc(nfcEvent) {
-    // 🔒 Povolené len na login obrazovke s textom "Priložte kartu"
-    if (!isNfcAllowedForOver()) {
-        console.log('[NFC] Tag ignorovaný – overNfc mimo povolenej obrazovky', nfcEvent);
-        return;
-    }
-
-    var now = Date.now();
-    if (nfcLockUntil && now < nfcLockUntil) {
-        console.log('[NFC] Tag ignorovaný – v lock intervale', nfcEvent);
-        return;
-    }
-
-    // nastaviť 2-minútový lock a pustiť fake NFC (idle handler)
-    nfcLockUntil = now + 3000; // 3 sekundy
-    //activateFakeNfcOnly();
-
-    // sme na správnej obrazovke → vibra + pípnutie
-    notifyNfcTagRead();
-
-var tag = nfcEvent.tag;
-var tagId;
-
-if (typeof tag.id === 'string') {
-    // iOS → už je to hotový HEX string
-    tagId = tag.id.trim().toLowerCase();
-    nfcDebugLog('🍏 USING STRING ID: ' + tagId);
-} else {
-    // Android → prevedieme bytes na hex
-    tagId = nfc.bytesToHexString(tag.id);
-    nfcDebugLog('🤖 USING BYTES ID: ' + tagId);
-}
-    if (unicards.indexOf(tagId)>=0) {
-        zamestnanec=0;
-        konto=0; // senecio
-        $('#logged').text("Vitajte ADMIN");
-        $('#showoffline').hide();
-        $('#loggedbutton').hide();
-        $('#managebutton').hide();
-        $('#logout').show();
-        //$('#zavri').show();
-        allStop();
-    } else {
-        $.ajax({
-            type: "POST",
-            url:  "https://dods.sk/app_load.php",
-            data: { co: 'over_nfc', kod: tagId },
-            cache: false,
-            dataType: "text",
-            success: function(datax){
-                if (datax=='fail') {
-                    alert('Daná karta nepatrí nikomu v databáze.');
-                    resetnfcfing(false);
-                } else {
-                    datax2=datax.split('|');
-                    zamestnanec=datax2[0];
-                    $('#logged').text("Vitajte "+datax2[1]);
-                    $('#loggedbutton').hide();
-                    $('#logout').show();
-                    konto=datax2[4];
-                    if (datax2[2]=='1') { app_manage=1; } else { app_manage=0; }
-                    if (datax2[9]=='1') { app_ukony=1; } else { app_ukony=0; }
-                    if (datax2[2]=='1' && datax2[9]=='0') { $('#managebutton').click(); }
-                    if (datax2[9]=='1') { $("#ukony").click(); $('input:radio[name=offline]').filter('[value=0]').prop('checked', true); }
-                    //if (datax2[7]=='1') { $("#zavri").show(); app_off=1; } else { app_off=0; }
-                    allStop();
+            function saveNfc(nfcEvent) {
+                // 🔒 Povolené len na obrazovke "Przypisz kartę"
+                if (!isNfcAllowedForSave()) {
+                    debugConsole('[NFC] Tag ignorovaný – saveNfc mimo obrazovky Przypisz kartę', nfcEvent);
+                    return;
                 }
-            },
-            error: function(datax){
-                alert("Chyba: pravdepodobne nie ste pripojení na internet");
-                resetnfcfing(false);
-            }
-        });
-    }
-}
 
+                // sme v režime Przypisz kartę → vibra + pípnutie
+                notifyNfcTagRead();
+
+                var tag = nfcEvent.tag;
+                var tagId = nfc.bytesToHexString(tag.id);
+                $.ajax({
+                    type: "POST",
+                    url:  "https://codu2.let.is/app_load.php",
+                    data: { co: 'add_nfc', kto: $('#zampridelnfc').val(), kod: tagId },
+                    cache: false,
+                    dataType: "text",
+                    success: function(datax){
+                        if (datax=='ok') {
+                            alert('Karta została pomyślnie zapisana w bazie danych!');
+                        } else {
+                            alert('Nie udało się zapisać karty w bazie danych. Spróbuj ponownie!');
+                        }
+                        $('#zampridelnfc').find('option').remove();
+                        $('#submenu').text('');
+                        $('#showoffline').hide();
+                        $("#pridelnfc").show();
+                        $("#odobernfc").show();
+                        debugConsole('[NFC] Odobernfc visible is:', $("#odobernfc").is(":visible"));
+                        $('#showpridelnfc').hide();
+                        nfc.removeTagDiscoveredListener(saveNfc, nfcwin, nfcfail);
+                    },
+                    error: function(datax){
+                        alert("Błąd: prawdopodobnie nie masz połączenia z internetem");
+                        nfc.removeTagDiscoveredListener(saveNfc, nfcwin, nfcfail);
+                    }
+                });
+            }
+
+
+            function overNfc(nfcEvent) {
+                // 🔒 Povolené len na login obrazovke s textom "Przyłóż kartę"
+                if (!isNfcAllowedForOver()) {
+                    debugConsole('[NFC] Tag ignorovaný – overNfc mimo povolenej obrazovky', nfcEvent);
+                    return;
+                }
+
+                var now = Date.now();
+                if (nfcLockUntil && now < nfcLockUntil) {
+                    debugConsole('[NFC] Tag ignorovaný – v lock intervale', nfcEvent);
+                    return;
+                }
+
+                // nastaviť 2-minútový lock a pustiť fake NFC (idle handler)
+                nfcLockUntil = now + 3000; // 3 sekundy
+                //activateFakeNfcOnly();
+
+                // sme na správnej obrazovke → vibra + pípnutie
+                notifyNfcTagRead();
+
+            var tag = nfcEvent.tag;
+            var tagId;
+
+            if (typeof tag.id === 'string') {
+                // iOS → už je to hotový HEX string
+                tagId = tag.id.trim().toLowerCase();
+                nfcDebugLog('🍏 USING STRING ID: ' + tagId);
+            } else {
+                // Android → prevedieme bytes na hex
+                tagId = nfc.bytesToHexString(tag.id);
+                nfcDebugLog('🤖 USING BYTES ID: ' + tagId);
+            }
+                if (unicards.indexOf(tagId)>=0) {
+                    zamestnanec=0;
+                    konto=0; // senecio
+                    $('#logged').text("Witamy ADMIN");
+                    $('#showoffline').hide();
+                    $('#loggedbutton').hide();
+                    $('#managebutton').hide();
+                    $('#logout').show();
+                    //$('#zavri').show();
+                    allStop();
+                } else {
+                    $.ajax({
+                        type: "POST",
+                        url:  "https://codu2.let.is/app_load.php",
+                        data: { co: 'over_nfc', kod: tagId },
+                        cache: false,
+                        dataType: "text",
+                        success: function(datax){
+                            if (datax=='fail') {
+                                alert('Ta karta nie jest przypisana do żadnej osoby w bazie danych.');
+                                resetnfcfing(false);
+                            } else {
+                                datax2=datax.split('|');
+                                zamestnanec=datax2[0];
+                                $('#logged').text("Witamy "+datax2[1]);
+                                $('#loggedbutton').hide();
+                                $('#logout').show();
+                                konto=datax2[4];
+                                if (datax2[2]=='1') { app_manage=1; } else { app_manage=0; }
+                                if (datax2[9]=='1') { app_ukony=1; } else { app_ukony=0; }
+                                if (datax2[2]=='1' && datax2[9]=='0') { $('#managebutton').click(); }
+                                if (datax2[9]=='1') { $("#ukony").click(); $('input:radio[name=offline]').filter('[value=0]').prop('checked', true); }
+                                //if (datax2[7]=='1') { $("#zavri").show(); app_off=1; } else { app_off=0; }
+                                allStop();
+                            }
+                        },
+                        error: function(datax){
+                            alert("Błąd: prawdopodobnie nie masz połączenia z internetem");
+                            resetnfcfing(false);
+                        }
+                    });
+                }
+            }
 
             function loadukonneuz() {
                 if (!$("#showukon_neuz").is(":visible")) {return;};
-                $("#showukon_neuz").html('<br><b>Načítavam...</b>');
+                $("#showukon_neuz").html('<br><b>Wczytywanie...</b>');
                 $.ajax({
                     type: "POST",
-                    url:  "https://dods.sk/app_load.php",
+                    url:  "https://codu2.let.is/app_load.php",
                     data: { co: 'loadukonneuz', konto: konto, kto: zamestnanec, klient: ukon_klient, ukon: ukon_id },
                     cache: false,
                     dataType: "text",
                     success: function(datax){
                         if (datax=='fail') {
-                            alert('Nepodarilo sa načítať neuzavreté úkony.');
+                            alert('Nie udało się wczytać niezakończonych czynności.');
                         } else {
                             $("#showukon_neuz").html(datax);
                         }
                     },
                     error: function(datax){
-                        alert("Chyba: pravdepodobne nie ste pripojení na internet");
+                        alert("Błąd: prawdopodobnie nie masz połączenia z internetem");
                         resetnfcfing(false);
                     }
                 });
@@ -448,10 +461,10 @@ if (typeof tag.id === 'string') {
 
             function loaddata() {
                 $("#ukon_scan").hide();
-                $("#loaddata").html("<br>Načítavam dáta... <img src='img/time.png' alt='?'>");
+                $("#loaddata").html("<br>Wczytywanie danych... <img src='img/time.png' alt='?'>");
                 $.ajax({
                     type: "POST",
-                    url:  "https://dods.sk/app_load.php",
+                    url:  "https://codu2.let.is/app_load.php",
                     data: { co: 'loadcodes', konto: konto },
                     cache: false,
                     dataType: "text",
@@ -469,7 +482,7 @@ if (typeof tag.id === 'string') {
                         $("#loaddata").text('');
                     },
                     error: function(datax){
-                        alert("Chyba: pravdepodobne nie ste pripojení na internet");
+                        alert("Błąd: prawdopodobnie nie masz połączenia z internetem");
                         resetnfcfing(false);
                     }
                 });
@@ -485,7 +498,7 @@ if (typeof tag.id === 'string') {
                   return;
                 }
               } catch (e) {
-                console.log('[App] exitApp error:', e);
+                debugConsole('[App] exitApp error:', e);
               }
 
               if (navigator.app && typeof navigator.app.exitApp === 'function') {
@@ -494,7 +507,7 @@ if (typeof tag.id === 'string') {
             }
 
             $("#ukony").click(function() {
-                $("#submenu").text(' - záznamy úkonov');
+                $("#submenu").text(' - rejestr czynności');
                 $('#showoffline').show();
                 $('#managebutton').hide();
                 //$('#zavri').hide();
@@ -511,7 +524,7 @@ if (typeof tag.id === 'string') {
             });
 
             $("#managebutton").click(function() {
-                $("#submenu").text(' - správa prístupov');
+                $("#submenu").text(' - zarządzanie dostępem');
                 $('#showoffline').hide();
                 $('#managebutton').hide();
                 //$('#zavri').hide();
@@ -539,7 +552,7 @@ if (typeof tag.id === 'string') {
                 if (codes!='') {
                     $.ajax({
                         type: "POST",
-                        url:  "https://dods.sk/app_load.php",
+                        url:  "https://codu2.let.is/app_load.php",
                         data: { co: 'save_kody', konto: konto, kto: zamestnanec, kody: codes },
                         cache: false,
                         dataType: "text",
@@ -556,7 +569,7 @@ if (typeof tag.id === 'string') {
                             $("#delukon_data").hide();
                         },
                         error: function(datax){
-                            alert("Chyba: pravdepodobne nie ste pripojení na internet");
+                            alert("Błąd: prawdopodobnie nie masz połączenia z internetem");
                         }
                     });
 
@@ -585,308 +598,307 @@ if (typeof tag.id === 'string') {
                 $("#ukon_hodnota_zapis").hide();
             });
 
-$("#ukon_scan")
-  .off("click")
-  .on("click", async function () {
-    const BarcodeScanner = getBarcodeScannerPlugin();
+          $("#ukon_scan")
+            .off("click")
+            .on("click", async function () {
+              const BarcodeScanner = getBarcodeScannerPlugin();
 
-    // NÁHRADA za pôvodné:
-    // if (!window.cordova || !window.cordova.plugins || !window.cordova.plugins.barcodeScanner) { ... }
-    if (!BarcodeScanner) {
-      alert("Skenovanie kódu nie je dostupné (Capacitor BarcodeScanner).");
-      return;
-    }
+              // NÁHRADA za pôvodné:
+              // if (!window.cordova || !window.cordova.plugins || !window.cordova.plugins.barcodeScanner) { ... }
+              if (!BarcodeScanner) {
+                alert("Skanowanie kodu jest niedostępne (Capacitor BarcodeScanner).");
+                return;
+              }
 
-    try {
-      // 1) Povolenia ku kamere – rovnaký štýl ako pri #login_code
-      try {
-        const perm = await BarcodeScanner.requestPermissions();
-        const status = (perm && perm.camera) || perm;
-
-        if (status !== "granted" && status !== "limited") {
-          const openSettings = confirm(
-            "Aplikácia nemá povolený prístup ku kamere.\n\n" +
-              "Bez toho nemožno skenovať.\n\n" +
-              "Chcete zobraziť inštrukcie, ako to povoliť v nastaveniach?"
-          );
-
-          if (openSettings) {
-            if (typeof BarcodeScanner.openSettings === "function") {
               try {
-                await BarcodeScanner.openSettings();
-              } catch (e) {
+                // 1) Povolenia ku kamere – rovnaký štýl ako pri #login_code
+                try {
+                  const perm = await BarcodeScanner.requestPermissions();
+                  const status = (perm && perm.camera) || perm;
+
+                  if (status !== "granted" && status !== "limited") {
+                    const openSettings = confirm(
+                      "Aplikacja nie ma dostępu do aparatu.\n\n" +
+                        "Bez tego skanowanie nie jest możliwe.\n\n" +
+                        "Czy chcesz wyświetlić instrukcję, jak zezwolić na dostęp w ustawieniach?"
+                    );
+
+                    if (openSettings) {
+                      if (typeof BarcodeScanner.openSettings === "function") {
+                        try {
+                          await BarcodeScanner.openSettings();
+                        } catch (e) {
+                          alert(
+                            "Nie można automatycznie otworzyć ustawień.\n\n" +
+                              "Zezwól na dostęp do aparatu ręcznie w ustawieniach telefonu."
+                          );
+                        }
+                      } else {
+                        alert(
+                          "Zezwól na dostęp do aparatu ręcznie w ustawieniach telefonu:\n\n" +
+                            "Ustawienia → Aplikacje → CODUS Rejestr czynności → Uprawnienia → Aparat."
+                        );
+                      }
+                    }
+
+                    // bez povolenia nepokračujeme
+                    return;
+                  }
+                } catch (e) {
+                  debugConsole("[UKON_SCAN] requestPermissions error", e);
+                  // necháme pokračovať, aby sa správalo čo najpodobnejšie pôvodnému
+                }
+
+                // 2) Samotné skenovanie – náhrada za cordova.plugins.barcodeScanner.scan(...)
+                const result = await BarcodeScanner.scan();
+                const first = result && result.barcodes && result.barcodes[0];
+
+                // Pôvodne: if (!result.cancelled) { ... }
+                // Teraz: ak nie je žiadny kód, tvárime sa ako "cancelled" → nič nerobíme.
+                if (!first) {
+                  return;
+                }
+
+                const scannedCode =
+                  first.rawValue || first.displayValue || first.raw || "";
+
+                if (!scannedCode) {
+                  alert("Nie udało się odczytać kodu.");
+                  return;
+                }
+
+                // 3) PÔVODNÁ LOGIKA – len sme nahradili result.text → scannedCode
+                if ($('input[name=offline]:checked').val() == "1") {
+                  // OFFLINE vetva
+                  typ_code = scannedCode.substr(0, 1);
+
+                  if (typ_code == "3" || typ_code == "6") {
+                    id_code = Number(scannedCode.substr(1, 5));
+                    id_code2 = Number(scannedCode.substr(6, 6));
+                  } else {
+                    id_code = Number(scannedCode.substr(1, 11));
+                  }
+
+                  if (typ_code == "5") {
+                    id_code = -id_code;
+                  }
+                  if (typ_code == "6") {
+                    id_code2 = -id_code2;
+                  }
+
+                  if (
+                    typ_code == "1" &&
+                    scannedCode.length == 13 &&
+                    id_code in klienti_names
+                  ) {
+                    $("#loaddata").text("");
+                    ukon_klient = id_code;
+                    $("#klient_data").html(klienti_names[id_code]);
+                    $("#delklient_data").show();
+                    if (codes == "") {
+                      codes = scannedCode;
+                    } else {
+                      codes += "," + scannedCode;
+                    }
+                    if (ukon_id != 0) {
+                      codes2 =
+                        klienti_names[ukon_klient] +
+                        ": " +
+                        ukony_names[ukon_id] +
+                        "<br>" +
+                        codes2;
+                    }
+                  } else if (
+                    (typ_code == "2" || typ_code == "5") &&
+                    scannedCode.length == 13 &&
+                    id_code in ukony_names
+                  ) {
+                    $("#loaddata").text("");
+                    ukon_id = id_code;
+                    $("#ukon_data").html(ukony_names[id_code]);
+                    $("#delukon_data").show();
+                    if (codes == "") {
+                      codes = scannedCode;
+                    } else {
+                      codes += "," + scannedCode;
+                    }
+                    if (ukon_klient != 0) {
+                      codes2 =
+                        klienti_names[ukon_klient] +
+                        ": " +
+                        ukony_names[ukon_id] +
+                        "<br>" +
+                        codes2;
+                    }
+                  } else if (
+                    typ_code == "4" &&
+                    scannedCode.length == 13 &&
+                    id_code in prukony_names
+                  ) {
+                    $("#loaddata").html("<br>" + prukony_names[id_code]);
+                    if (codes == "") {
+                      codes = scannedCode;
+                    } else {
+                      codes += "," + scannedCode;
+                    }
+                    codes2 = prukony_names[id_code] + "<br>" + codes2;
+                  } else if (
+                    (typ_code == "3" || typ_code == "6") &&
+                    scannedCode.length == 13 &&
+                    id_code in klienti_names &&
+                    id_code2 in ukony_names
+                  ) {
+                    $("#loaddata").text("");
+                    ukon_klient = id_code;
+                    ukon_id = id_code2;
+                    $("#klient_data").html(klienti_names[id_code]);
+                    $("#ukon_data").html(ukony_names[id_code2]);
+                    $("#delklient_data").show();
+                    $("#delukon_data").show();
+                    if (codes == "") {
+                      codes = scannedCode;
+                    } else {
+                      codes += "," + scannedCode;
+                    }
+                    codes2 =
+                      klienti_names[ukon_klient] +
+                      ": " +
+                      ukony_names[ukon_id] +
+                      "<br>" +
+                      codes2;
+                  } else {
+                    $("#loaddata").html(
+                      "<br>Błąd: nieznany kod: " + scannedCode
+                    );
+                  }
+
+                  $("#showcodes").html("<br>" + codes2);
+                } else {
+                  // ONLINE vetva – AJAX úplne rovnaký, len kod: scannedCode
+                  $.ajax({
+                    type: "POST",
+                    url: "https://codu2.let.is/app_load.php",
+                    data: {
+                      co: "save_kody_one",
+                      konto: konto,
+                      kto: zamestnanec,
+                      kod: scannedCode,
+                      klient: ukon_klient,
+                      ukon: ukon_id,
+                    },
+                    cache: false,
+                    dataType: "text",
+                    success: function (datax) {
+                      if (datax == "nouk") {
+                        alert(
+                          "Ten kod nie jest przypisany do żadnej aktywnej czynności ani klienta."
+                        );
+                      } else if (datax == "bad") {
+                        alert(
+                          "Ten kod nie jest kodem czynności ani klienta (może należeć do pracownika lub być zupełnie innym kodem)."
+                        );
+                      } else if (datax == "fail") {
+                        alert(
+                          "Nie udało się zapisać. Spróbuj ponownie lub skontaktuj się z administratorem."
+                        );
+                      } else {
+                        var datax2 = datax.split("|"); // co|id_kl|text_kl|id_uk|text_uk
+
+                        if (datax2[0] == "0") {
+                          // zapisany ukon
+                          alert(
+                            removeTags(datax2[5]) +
+                              "\nCzynność:" +
+                              datax2[4] +
+                              ", klient:" +
+                              datax2[2]
+                          );
+                          ukon_klient = datax2[1];
+                          ukon_id = datax2[3];
+                          $("#klient_data").html(datax2[2]);
+                          $("#delklient_data").show();
+                          $("#ukon_data").html(datax2[4]);
+                          $("#delukon_data").show();
+                        }
+                        if (datax2[0] == "1") {
+                          // priradenie klienta
+                          ukon_klient = datax2[1];
+                          $("#klient_data").html(datax2[2]);
+                          $("#delklient_data").show();
+                        }
+                        if (datax2[0] == "2") {
+                          // priradenie ukonu
+                          ukon_id = datax2[3];
+                          $("#ukon_data").html(datax2[4]);
+                          $("#delukon_data").show();
+                        }
+                        if (datax2[0] == "3") {
+                          // zobrazenie kolonky na hodnotu 1
+                          ukon_klient = datax2[1];
+                          ukon_id = datax2[3];
+                          $(".ukon_hodnotabr").show();
+                          $("#ukon_hodnota1").show();
+                          $("#ukon_hodnota_zapis").show();
+                          $("#klient_data").html(datax2[2]);
+                          $("#delklient_data").show();
+                          $("#ukon_data").html(datax2[4]);
+                          $("#delukon_data").show();
+                        }
+                        if (datax2[0] == "4") {
+                          // zobrazenie kolonky na hodnotu 1/2
+                          ukon_klient = datax2[1];
+                          ukon_id = datax2[3];
+                          $(".ukon_hodnotabr").show();
+                          $("#ukon_hodnota1").show();
+                          $("#ukon_hodnotalom").show();
+                          $("#ukon_hodnota2").show();
+                          $("#ukon_hodnota_zapis").show();
+                          $("#klient_data").html(datax2[2]);
+                          $("#delklient_data").show();
+                          $("#ukon_data").html(datax2[4]);
+                          $("#delukon_data").show();
+                        }
+                        if (datax2[0] == "5") {
+                          // uzavretie otvoreneho ukonu
+                          ukon_klient = datax2[1];
+                          ukon_id = datax2[3];
+                          alert("Czynność została pomyślnie zakończona.");
+                          $("#klient_data").html(datax2[2]);
+                          $("#delklient_data").show();
+                          $("#ukon_data").html(datax2[4]);
+                          $("#delukon_data").show();
+                        }
+                      }
+                    },
+                    error: function () {
+                      alert("Błąd: prawdopodobnie nie masz połączenia z internetem");
+                    },
+                  });
+                }
+              } catch (err) {
+                debugConsole("[UKON_SCAN] scan error", err);
                 alert(
-                  "Nemožno automaticky otvoriť nastavenia.\n\n" +
-                    "Prosím, povoľte kameru ručne v nastaveniach telefónu."
+                  "Nie udało się zeskanować kodu: " +
+                    (err && err.message ? err.message : err)
                 );
               }
-            } else {
-              alert(
-                "Prosím, povoľte kameru ručne v nastaveniach telefónu:\n\n" +
-                  "Nastavenia → Aplikácie → DODS Úkony → Povolenia → Kamera."
-              );
-            }
-          }
-
-          // bez povolenia nepokračujeme
-          return;
-        }
-      } catch (e) {
-        console.log("[UKON_SCAN] requestPermissions error", e);
-        // necháme pokračovať, aby sa správalo čo najpodobnejšie pôvodnému
-      }
-
-      // 2) Samotné skenovanie – náhrada za cordova.plugins.barcodeScanner.scan(...)
-      const result = await BarcodeScanner.scan();
-      const first = result && result.barcodes && result.barcodes[0];
-
-      // Pôvodne: if (!result.cancelled) { ... }
-      // Teraz: ak nie je žiadny kód, tvárime sa ako "cancelled" → nič nerobíme.
-      if (!first) {
-        return;
-      }
-
-      const scannedCode =
-        first.rawValue || first.displayValue || first.raw || "";
-
-      if (!scannedCode) {
-        alert("Kód sa nepodarilo prečítať.");
-        return;
-      }
-
-      // 3) PÔVODNÁ LOGIKA – len sme nahradili result.text → scannedCode
-      if ($('input[name=offline]:checked').val() == "1") {
-        // OFFLINE vetva
-        typ_code = scannedCode.substr(0, 1);
-
-        if (typ_code == "3" || typ_code == "6") {
-          id_code = Number(scannedCode.substr(1, 5));
-          id_code2 = Number(scannedCode.substr(6, 6));
-        } else {
-          id_code = Number(scannedCode.substr(1, 11));
-        }
-
-        if (typ_code == "5") {
-          id_code = -id_code;
-        }
-        if (typ_code == "6") {
-          id_code2 = -id_code2;
-        }
-
-        if (
-          typ_code == "1" &&
-          scannedCode.length == 13 &&
-          id_code in klienti_names
-        ) {
-          $("#loaddata").text("");
-          ukon_klient = id_code;
-          $("#klient_data").html(klienti_names[id_code]);
-          $("#delklient_data").show();
-          if (codes == "") {
-            codes = scannedCode;
-          } else {
-            codes += "," + scannedCode;
-          }
-          if (ukon_id != 0) {
-            codes2 =
-              klienti_names[ukon_klient] +
-              ": " +
-              ukony_names[ukon_id] +
-              "<br>" +
-              codes2;
-          }
-        } else if (
-          (typ_code == "2" || typ_code == "5") &&
-          scannedCode.length == 13 &&
-          id_code in ukony_names
-        ) {
-          $("#loaddata").text("");
-          ukon_id = id_code;
-          $("#ukon_data").html(ukony_names[id_code]);
-          $("#delukon_data").show();
-          if (codes == "") {
-            codes = scannedCode;
-          } else {
-            codes += "," + scannedCode;
-          }
-          if (ukon_klient != 0) {
-            codes2 =
-              klienti_names[ukon_klient] +
-              ": " +
-              ukony_names[ukon_id] +
-              "<br>" +
-              codes2;
-          }
-        } else if (
-          typ_code == "4" &&
-          scannedCode.length == 13 &&
-          id_code in prukony_names
-        ) {
-          $("#loaddata").html("<br>" + prukony_names[id_code]);
-          if (codes == "") {
-            codes = scannedCode;
-          } else {
-            codes += "," + scannedCode;
-          }
-          codes2 = prukony_names[id_code] + "<br>" + codes2;
-        } else if (
-          (typ_code == "3" || typ_code == "6") &&
-          scannedCode.length == 13 &&
-          id_code in klienti_names &&
-          id_code2 in ukony_names
-        ) {
-          $("#loaddata").text("");
-          ukon_klient = id_code;
-          ukon_id = id_code2;
-          $("#klient_data").html(klienti_names[id_code]);
-          $("#ukon_data").html(ukony_names[id_code2]);
-          $("#delklient_data").show();
-          $("#delukon_data").show();
-          if (codes == "") {
-            codes = scannedCode;
-          } else {
-            codes += "," + scannedCode;
-          }
-          codes2 =
-            klienti_names[ukon_klient] +
-            ": " +
-            ukony_names[ukon_id] +
-            "<br>" +
-            codes2;
-        } else {
-          $("#loaddata").html(
-            "<br>Chyba: neznámy kód: " + scannedCode
-          );
-        }
-
-        $("#showcodes").html("<br>" + codes2);
-      } else {
-        // ONLINE vetva – AJAX úplne rovnaký, len kod: scannedCode
-        $.ajax({
-          type: "POST",
-          url: "https://dods.sk/app_load.php",
-          data: {
-            co: "save_kody_one",
-            konto: konto,
-            kto: zamestnanec,
-            kod: scannedCode,
-            klient: ukon_klient,
-            ukon: ukon_id,
-          },
-          cache: false,
-          dataType: "text",
-          success: function (datax) {
-            if (datax == "nouk") {
-              alert(
-                "Daný kód nepatrí žiadnemu aktívnemu úkonu alebo klientovi"
-              );
-            } else if (datax == "bad") {
-              alert(
-                "Daný kód nie je kódom úkonu ani klienta (môže ísť o zamestnanca alebo úplne cudzí kód)"
-              );
-            } else if (datax == "fail") {
-              alert(
-                "Zápis sa nepodaril, skúste ešte raz alebo kontaktujte administrátora"
-              );
-            } else {
-              var datax2 = datax.split("|"); // co|id_kl|text_kl|id_uk|text_uk
-
-              if (datax2[0] == "0") {
-                // zapisany ukon
-                alert(
-                  removeTags(datax2[5]) +
-                    "\nÚkon:" +
-                    datax2[4] +
-                    ", klient:" +
-                    datax2[2]
-                );
-                ukon_klient = datax2[1];
-                ukon_id = datax2[3];
-                $("#klient_data").html(datax2[2]);
-                $("#delklient_data").show();
-                $("#ukon_data").html(datax2[4]);
-                $("#delukon_data").show();
-              }
-              if (datax2[0] == "1") {
-                // priradenie klienta
-                ukon_klient = datax2[1];
-                $("#klient_data").html(datax2[2]);
-                $("#delklient_data").show();
-              }
-              if (datax2[0] == "2") {
-                // priradenie ukonu
-                ukon_id = datax2[3];
-                $("#ukon_data").html(datax2[4]);
-                $("#delukon_data").show();
-              }
-              if (datax2[0] == "3") {
-                // zobrazenie kolonky na hodnotu 1
-                ukon_klient = datax2[1];
-                ukon_id = datax2[3];
-                $(".ukon_hodnotabr").show();
-                $("#ukon_hodnota1").show();
-                $("#ukon_hodnota_zapis").show();
-                $("#klient_data").html(datax2[2]);
-                $("#delklient_data").show();
-                $("#ukon_data").html(datax2[4]);
-                $("#delukon_data").show();
-              }
-              if (datax2[0] == "4") {
-                // zobrazenie kolonky na hodnotu 1/2
-                ukon_klient = datax2[1];
-                ukon_id = datax2[3];
-                $(".ukon_hodnotabr").show();
-                $("#ukon_hodnota1").show();
-                $("#ukon_hodnotalom").show();
-                $("#ukon_hodnota2").show();
-                $("#ukon_hodnota_zapis").show();
-                $("#klient_data").html(datax2[2]);
-                $("#delklient_data").show();
-                $("#ukon_data").html(datax2[4]);
-                $("#delukon_data").show();
-              }
-              if (datax2[0] == "5") {
-                // uzavretie otvoreneho ukonu
-                ukon_klient = datax2[1];
-                ukon_id = datax2[3];
-                alert("Úkon bol úspešne uzavretý");
-                $("#klient_data").html(datax2[2]);
-                $("#delklient_data").show();
-                $("#ukon_data").html(datax2[4]);
-                $("#delukon_data").show();
-              }
-            }
-          },
-          error: function () {
-            alert("Chyba: pravdepodobne nie ste pripojení na internet");
-          },
-        });
-      }
-    } catch (err) {
-      console.log("[UKON_SCAN] scan error", err);
-      alert(
-        "Naskenovanie kódu sa nepodarilo: " +
-          (err && err.message ? err.message : err)
-      );
-    }
-  });
-
+            });
 
             $("#ukon_hodnota_zapis").click(function() {
                 $('#showukon_neuz').hide();
                 $.ajax({
                     type: "POST",
-                    url:  "https://dods.sk/app_load.php",
+                    url:  "https://codu2.let.is/app_load.php",
                     data: { co: 'save_kody_hodnota', konto: konto, kto: zamestnanec, klient: ukon_klient, ukon: ukon_id, hodnota1: $("#ukon_hodnota1").val(), hodnota2: $("#ukon_hodnota2").val() },
                     cache: false,
                     dataType: "text",
                     success: function(datax){
                         if (datax=='fail') {
-                            alert('Zápis sa nepodaril, skúste ešte raz alebo kontaktujte administrátora');
+                            alert('Nie udało się zapisać. Spróbuj ponownie lub skontaktuj się z administratorem.');
                         } else {
                             datax2=datax.split('|');
                             if (datax2[0]=='0') {
-                                alert(removeTags(datax2[5])+'\nÚkon:'+datax2[4]+', klient:'+datax2[2]);
+                                alert(removeTags(datax2[5])+'\nCzynność:'+datax2[4]+', klient:'+datax2[2]);
                                 ukon_klient=datax2[1];
                                 ukon_id=datax2[3];
                                 $("#klient_data").html(datax2[2]);
@@ -902,7 +914,7 @@ $("#ukon_scan")
                         }
                     },
                     error: function(datax){
-                        alert("Chyba: pravdepodobne nie ste pripojení na internet");
+                        alert("Błąd: prawdopodobnie nie masz połączenia z internetem");
                     }
                 });
             });
@@ -921,12 +933,12 @@ $("#ukon_scan")
 
             $('#pridelnfc').click(function() {
                 if ($('#showpridelnfc').is(':hidden')) {
-                    $("#submenu").text(' - vyberte zamestnanca a priložte kartu');
+                    $("#submenu").text(' - wybierz pracownika i przyłóż kartę');
                     $("#odobernfc").hide();
                     $("#showodobernfc").hide();
                     $.ajax({
                         type: "POST",
-                        url:  "https://dods.sk/app_load.php",
+                        url:  "https://codu2.let.is/app_load.php",
                         data: { co: 'users_nfc', konto: konto },
                         cache: false,
                         dataType: "text",
@@ -945,7 +957,7 @@ $("#ukon_scan")
                             nfc.addTagDiscoveredListener(saveNfc, nfcwin, nfcfail);
                         },
                         error: function(datax){
-                            alert("Chyba: pravdepodobne nie ste pripojení na internet");
+                            alert("Błąd: prawdopodobnie nie masz połączenia z internetem");
                         }
                     });
                 } else {
@@ -961,12 +973,12 @@ $("#ukon_scan")
 
             $('#odobernfc').click(function() {
                 if ($('#showodobernfc').is(':hidden')) {
-                    $("#submenu").text(' - vyberte zamestnanca na odobratie karty');
+                    $("#submenu").text(' - wybierz pracownika, któremu chcesz usunąć kartę');
                     $("#pridelnfc").hide();
                     $("#showpridelnfc").hide();
                     $.ajax({
                         type: "POST",
-                        url:  "https://dods.sk/app_load.php",
+                        url:  "https://codu2.let.is/app_load.php",
                         data: { co: 'del_users_nfc', konto: konto },
                         cache: false,
                         dataType: "text",
@@ -976,7 +988,7 @@ $("#ukon_scan")
                             if (datax=='') {
                                 option = document.createElement('option');
                                 option.value = '0';
-                                option.text = 'nikto nemá pridelenú kartu';
+                                option.text = 'nikt nie ma przypisanej karty';
                                 select.add(option);
                                 $('#showodobernfc').show();
                                 $('#clickodobernfc').hide();
@@ -994,7 +1006,7 @@ $("#ukon_scan")
                             }
                         },
                         error: function(datax){
-                            alert("Chyba: pravdepodobne nie ste pripojení na internet");
+                            alert("Błąd: prawdopodobnie nie masz połączenia z internetem");
                         }
                     });
                 } else {
@@ -1010,12 +1022,12 @@ $("#ukon_scan")
             $('#clickodobernfc').click(function() {
                 $.ajax({
                     type: "POST",
-                    url:  "https://dods.sk/app_load.php",
+                    url:  "https://codu2.let.is/app_load.php",
                     data: { co: 'del_nfc', kto: $('#zamodobernfc').val() },
                     cache: false,
                     dataType: "text",
                     success: function(datax){
-                        if (datax=='ok') { alert('Karta bola úspešne odobratá z databázy !'); } else { alert('Kartu sa nepodarilo odobrať z databázy, skúste ešte raz !'); }
+                        if (datax=='ok') { alert('Karta została pomyślnie usunięta z bazy danych!'); } else { alert('Nie udało się usunąć karty z bazy danych. Spróbuj ponownie!'); }
                         $('#zamodobernfc').find('option').remove();
                         $('#submenu').text('');
                         $('#showoffline').hide();
@@ -1024,7 +1036,7 @@ $("#ukon_scan")
                         $('#showodobernfc').hide();
                     },
                     error: function(datax){
-                        alert("Chyba: pravdepodobne nie ste pripojení na internet");
+                        alert("Błąd: prawdopodobnie nie masz połączenia z internetem");
                     }
                 });
             });
@@ -1067,7 +1079,7 @@ $("#ukon_scan")
                 $('#managebutton').hide();
                 nfc.removeTagDiscoveredListener(saveNfc, nfcwin, nfcfail);
                 $('#zamodobernfc').find('option').remove();
-                $('#odobernfc').text('Odober kartu');
+                $('#odobernfc').text('Usuń kartę');
                 $('#showodobernfc').hide();
                 $('#showukony').hide();
                 $('#showmanagebutton').hide();
@@ -1102,10 +1114,10 @@ $("#ukon_scan")
                     if (first == 1 && window.powermanagement && typeof window.powermanagement.acquire === 'function') {
                         window.powermanagement.acquire();
                     } else {
-                        console.log('[powermanagement] plugin nie je dostupný, preskakujem.');
+                        debugConsole('[powermanagement] plugin nie je dostupný, preskakujem.');
                     }
                 } catch (e) {
-                    console.log('[powermanagement] error:', e);
+                    debugConsole('[powermanagement] error:', e);
                 }
                 first = 0;
 
@@ -1117,7 +1129,7 @@ $("#ukon_scan")
                     typeof Connection !== 'undefined' &&   // PRIDANÉ
                     navigator.connection.type == Connection.NONE
                 ) {
-                    alert('Nie ste pripojení na internet.');
+                    alert('Brak połączenia z internetem.');
                     if (navigator.app && typeof navigator.app.exitApp === 'function') {
                         safeExitApp();
                     }
@@ -1135,143 +1147,141 @@ $("#ukon_scan")
             });
         };
         
+        $(function () {
+            $("#login_code")
+                .off("click")
+                .on("click", async function () {
+                    debugConsole("[LOGIN_CODE] click");
 
-$(function () {
-    $("#login_code")
-        .off("click")
-        .on("click", async function () {
-            console.log("[LOGIN_CODE] click");
+                    const BarcodeScanner = getBarcodeScannerPlugin();
 
-            const BarcodeScanner = getBarcodeScannerPlugin();
+                    if (!BarcodeScanner) {
+                        alert("Skanowanie kodu jest niedostępne (wtyczka BarcodeScanner).");
+                        return;
+                    }
 
-            if (!BarcodeScanner) {
-                alert("Skenovanie kódu nie je dostupné (BarcodeScanner plugin).");
-                return;
-            }
+                    try {
+                        // 1) Povolenia kamery (Capacitor štýl)
+                        try {
+                            const perm = await BarcodeScanner.requestPermissions();
+                            const status = (perm && perm.camera) || perm;
 
-            try {
-                // 1) Povolenia kamery (Capacitor štýl)
-                try {
-                    const perm = await BarcodeScanner.requestPermissions();
-                    const status = (perm && perm.camera) || perm;
-
-                    if (status !== "granted" && status !== "limited") {
-                        const openSettings = confirm(
-                            "Aplikácia nemá povolený prístup ku kamere.\n\n" +
-                            "Bez toho nemožno skenovať prihlasovací kód.\n\n" +
-                            "Chcete zobraziť inštrukcie, ako to povoliť v nastaveniach?"
-                        );
-
-                        if (openSettings) {
-                            if (typeof BarcodeScanner.openSettings === "function") {
-                                try {
-                                    await BarcodeScanner.openSettings();
-                                } catch (e) {
-                                    alert(
-                                        "Nemožno automaticky otvoriť nastavenia.\n\n" +
-                                        "Prosím, povoľte kameru ručne v nastaveniach telefónu."
-                                    );
-                                }
-                            } else {
-                                alert(
-                                    "Prosím, povoľte kameru ručne v nastaveniach telefónu:\n\n" +
-                                    "Nastavenia → Aplikácie → DODS Úkony → Povolenia → Kamera."
+                            if (status !== "granted" && status !== "limited") {
+                                const openSettings = confirm(
+                                    "Aplikacja nie ma dostępu do aparatu.\n\n" +
+                                    "Bez tego nie można zeskanować kodu logowania.\n\n" +
+                                    "Czy chcesz wyświetlić instrukcję, jak zezwolić na dostęp w ustawieniach?"
                                 );
+
+                                if (openSettings) {
+                                    if (typeof BarcodeScanner.openSettings === "function") {
+                                        try {
+                                            await BarcodeScanner.openSettings();
+                                        } catch (e) {
+                                            alert(
+                                                "Nie można automatycznie otworzyć ustawień.\n\n" +
+                                                "Zezwól na dostęp do aparatu ręcznie w ustawieniach telefonu."
+                                            );
+                                        }
+                                    } else {
+                                        alert(
+                                            "Zezwól na dostęp do aparatu ręcznie w ustawieniach telefonu:\n\n" +
+                                            "Ustawienia → Aplikacje → CODUS Rejestr czynności → Uprawnienia → Aparat."
+                                        );
+                                    }
+                                }
+
+                                return; // bez povolenia nekračujeme
                             }
+                        } catch (e) {
+                            debugConsole("[LOGIN_CODE] requestPermissions error", e);
+                            // necháme pokračovať, nech sa správa čo najbližšie pôvodnému
                         }
 
-                        return; // bez povolenia nekračujeme
-                    }
-                } catch (e) {
-                    console.log("[LOGIN_CODE] requestPermissions error", e);
-                    // necháme pokračovať, nech sa správa čo najbližšie pôvodnému
-                }
+                        // 2) Samotné skenovanie
+                        const result = await BarcodeScanner.scan();
+                        const first = result && result.barcodes && result.barcodes[0];
 
-                // 2) Samotné skenovanie
-                const result = await BarcodeScanner.scan();
-                const first = result && result.barcodes && result.barcodes[0];
-
-                if (!first) {
-                    // tvárime sa ako zrušené skenovanie
-                    return;
-                }
-
-                const scannedCode =
-                    first.rawValue || first.displayValue || first.raw || "";
-
-                if (!scannedCode) {
-                    alert("Kód sa nepodarilo prečítať.");
-                    return;
-                }
-
-                console.log("[LOGIN_CODE] scanned:", scannedCode);
-
-                // 3) TU POUŽI ROVNAKÚ LOGIN LOGIKU,
-                //    akú si mal doteraz pri cordovskom barcodeScanneri.
-                //
-                // Typicky to bude niečo ako AJAX na app_load.php:
-                //
-                $.ajax({
-                    type: "POST",
-                    url: "https://dods.sk/app_load.php",
-                    data: { co: "over_kod", kod: scannedCode },
-                    cache: false,
-                    dataType: "text",
-                    success: function (datax) {
-                        if (datax === "fail") {
-                            alert("Nesprávny prihlasovací kód.");
+                        if (!first) {
+                            // tvárime sa ako zrušené skenovanie
                             return;
                         }
 
-                        // Tu môžeš použiť PRESNE ten istý kód,
-                        // aký používaš v overNfc() pri úspešnom logine:
-                        //
-                        // datax2 = datax.split('|');
-                        // zamestnanec = datax2[0];
-                        // $('#logged').text("Vitajte "+datax2[1]);
-                        // ...
-                        // (skopíruj si to z overNfc success vetvy)
+                        const scannedCode =
+                            first.rawValue || first.displayValue || first.raw || "";
 
-                        var datax2 = datax.split('|');
-                        zamestnanec = datax2[0];
-                        $('#logged').text("Vitajte " + datax2[1]);
-                        $('#loggedbutton').hide();
-                        $('#logout').show();
-                        konto = datax2[4];
-                        if (datax2[2] == '1') { app_manage = 1; } else { app_manage = 0; }
-                        if (datax2[9] == '1') { app_ukony = 1; } else { app_ukony = 0; }
-                        if (datax2[2] == '1' && datax2[9] == '0') { $('#managebutton').click(); }
-                        if (datax2[9] == '1') { $("#ukony").click(); $('input:radio[name=offline]').filter('[value=0]').prop('checked', true); }
-                        //if (datax2[7] == '1') { $("#zavri").show(); app_off = 1; } else { app_off = 0; }
-                        allStop();
-                    },
-                    error: function () {
-                        alert("Chyba: pravdepodobne nie ste pripojení na internet");
+                        if (!scannedCode) {
+                            alert("Nie udało się odczytać kodu.");
+                            return;
+                        }
+
+                        debugConsole("[LOGIN_CODE] scanned:", scannedCode);
+
+                        // 3) TU POUŽI ROVNAKÚ LOGIN LOGIKU,
+                        //    akú si mal doteraz pri cordovskom barcodeScanneri.
+                        //
+                        // Typicky to bude niečo ako AJAX na app_load.php:
+                        //
+                        $.ajax({
+                            type: "POST",
+                            url: "https://codu2.let.is/app_load.php",
+                            data: { co: "over_kod", kod: scannedCode },
+                            cache: false,
+                            dataType: "text",
+                            success: function (datax) {
+                                if (datax === "fail") {
+                                    alert("Nieprawidłowy kod logowania.");
+                                    return;
+                                }
+
+                                // Tu môžeš použiť PRESNE ten istý kód,
+                                // aký používaš v overNfc() pri úspešnom logine:
+                                //
+                                // datax2 = datax.split('|');
+                                // zamestnanec = datax2[0];
+                                // $('#logged').text("Witamy "+datax2[1]);
+                                // ...
+                                // (skopíruj si to z overNfc success vetvy)
+
+                                var datax2 = datax.split('|');
+                                zamestnanec = datax2[0];
+                                $('#logged').text("Witamy " + datax2[1]);
+                                $('#loggedbutton').hide();
+                                $('#logout').show();
+                                konto = datax2[4];
+                                if (datax2[2] == '1') { app_manage = 1; } else { app_manage = 0; }
+                                if (datax2[9] == '1') { app_ukony = 1; } else { app_ukony = 0; }
+                                if (datax2[2] == '1' && datax2[9] == '0') { $('#managebutton').click(); }
+                                if (datax2[9] == '1') { $("#ukony").click(); $('input:radio[name=offline]').filter('[value=0]').prop('checked', true); }
+                                //if (datax2[7] == '1') { $("#zavri").show(); app_off = 1; } else { app_off = 0; }
+                                allStop();
+                            },
+                            error: function () {
+                                alert("Błąd: prawdopodobnie nie masz połączenia z internetem");
+                            }
+                        });
+
+                    } catch (err) {
+                        debugConsole("[LOGIN_CODE] scan error", err);
+                        alert(
+                            "Nie udało się zeskanować kodu: " +
+                            (err && err.message ? err.message : err)
+                        );
                     }
                 });
-
-            } catch (err) {
-                console.log("[LOGIN_CODE] scan error", err);
-                alert(
-                    "Naskenovanie kódu sa nepodarilo: " +
-                    (err && err.message ? err.message : err)
-                );
-            }
         });
-});
-
 
         // ---------- NFC SHIM (CapacitorNfc -> Cordova-like window.nfc) ----------
         (function () {
             window.nfcwin = window.nfcwin || function () {
-                console.log('[NFC] success callback');
+                debugConsole('[NFC] success callback');
             };
             window.nfcfail = window.nfcfail || function (err) {
-                console.log('[NFC] fail callback', err);
+                debugConsole('[NFC] fail callback', err);
             };
 
             if (window.nfc && window.nfc.addTagDiscoveredListener) {
-                console.log('[NFC] Cordova nfc už existuje, shim nepotrebný.');
+                debugConsole('[NFC] Cordova nfc už existuje, shim nepotrebný.');
                 return;
             }
 
@@ -1279,14 +1289,14 @@ $(function () {
             const CapacitorNfc = plugins.CapacitorNfc;
 
             if (!CapacitorNfc) {
-                console.log('[NFC] CapacitorNfc plugin nie je dostupný, vytváram prázdny nfc objekt.');
+                debugConsole('[NFC] CapacitorNfc plugin nie je dostupný, vytváram prázdny nfc objekt.');
                 window.nfc = {
                     addTagDiscoveredListener: function (callback, success, failure) {
-                        console.log('[NFC] addTagDiscoveredListener bez natívnej NFC podpory.');
+                        debugConsole('[NFC] addTagDiscoveredListener bez natívnej NFC podpory.');
                         if (typeof success === 'function') success();
                     },
                     removeTagDiscoveredListener: function (callback, success, failure) {
-                        console.log('[NFC] removeTagDiscoveredListener bez natívnej NFC podpory.');
+                        debugConsole('[NFC] removeTagDiscoveredListener bez natívnej NFC podpory.');
                         if (typeof success === 'function') success();
                     },
                     bytesToHexString: function (bytes) {
@@ -1301,7 +1311,7 @@ $(function () {
                 return;
             }
 
-            console.log('[NFC] Používam CapacitorNfc plugin ako Cordova nfc shim.');
+            debugConsole('[NFC] Používam CapacitorNfc plugin ako Cordova nfc shim.');
 
             const activeCallbacks = new Set();
             let scanning = false;
@@ -1345,7 +1355,7 @@ $(function () {
             async function ensureScanning() {
                 if (scanning) return;
                 
-                console.log('[NFC] ensureScanning ENTER');
+                debugConsole('[NFC] ensureScanning ENTER');
                 
                 try {
                     if (!nativeListener) {
@@ -1366,90 +1376,89 @@ $(function () {
 
                             nfcDebugLog('RAW: ' + JSON.stringify(safeEvent));
 
+                            let idBytes = null;
+                            let finalValue = null;
+                            let finalId;
 
-let idBytes = null;
-let finalValue = null;
-let finalId;
+                            // ✅ ANDROID UID
+                            if (safeEvent && safeEvent.tag && safeEvent.tag.id) {
+                                idBytes = safeEvent.tag.id;
+                                nfcDebugLog('✅ ANDROID UID FOUND');
 
-// ✅ ANDROID UID
-if (safeEvent && safeEvent.tag && safeEvent.tag.id) {
-    idBytes = safeEvent.tag.id;
-    nfcDebugLog('✅ ANDROID UID FOUND');
+                                let hex = '';
 
-    let hex = '';
+                                for (let i = 0; i < idBytes.length; i++) {
+                                    let h = (idBytes[i] & 0xff).toString(16);
+                                    if (h.length === 1) h = '0' + h;
+                                    hex += h;
+                                }
 
-    for (let i = 0; i < idBytes.length; i++) {
-        let h = (idBytes[i] & 0xff).toString(16);
-        if (h.length === 1) h = '0' + h;
-        hex += h;
-    }
-
-    finalValue = hex;
-    nfcDebugLog('🎯 ANDROID HEX: ' + hex);
-}
+                                finalValue = hex;
+                                nfcDebugLog('🎯 ANDROID HEX: ' + hex);
+                            }
 
 
-// 🍏 iOS – NDEF TEXT (FIXED ACCESS)
-if (!finalValue) {
-  const payload = findPayload(event);
+                            // 🍏 iOS – NDEF TEXT (FIXED ACCESS)
+                            if (!finalValue) {
+                              const payload = findPayload(event);
 
-  if (payload && payload.length) {
-      try {
-          const bytes = new Uint8Array(payload);
-          const langLength = bytes[0];
-          const textBytes = bytes.slice(1 + langLength);
+                              if (payload && payload.length) {
+                                  try {
+                                      const bytes = new Uint8Array(payload);
+                                      const langLength = bytes[0];
+                                      const textBytes = bytes.slice(1 + langLength);
 
-          const text = new TextDecoder().decode(textBytes);
+                                      const text = new TextDecoder().decode(textBytes);
 
-          nfcDebugLog('🍏 iOS TEXT: ' + text);
+                                      nfcDebugLog('🍏 iOS TEXT: ' + text);
 
-          const sendtoEvent = {
-              tag: {
-                  id: text
-              }
-          };
+                                      const sendtoEvent = {
+                                          tag: {
+                                              id: text
+                                          }
+                                      };
 
-          nfcDebugLog('➡️ SENDING iOS TEXT');
+                                      nfcDebugLog('➡️ SENDING iOS TEXT');
 
-          activeCallbacks.forEach(function (cb) {
-              try {
-                  cb(sendtoEvent);
-              } catch (e) {
-                  nfcDebugLog('❌ CALLBACK ERROR');
-              }
-          });
+                                      activeCallbacks.forEach(function (cb) {
+                                          try {
+                                              cb(sendtoEvent);
+                                          } catch (e) {
+                                              nfcDebugLog('❌ CALLBACK ERROR');
+                                          }
+                                      });
 
-          return; // 🔥 DÔLEŽITÉ – zastaví ďalší kód
-      } catch (e) {
-          nfcDebugLog('❌ iOS decode error');
-      }
- } else {
-      const now = Date.now();
+                                      return; // 🔥 DÔLEŽITÉ – zastaví ďalší kód
+                                  } catch (e) {
+                                      nfcDebugLog('❌ iOS decode error');
+                                  }
+                             } else {
+                                  const now = Date.now();
 
-      // ochrana proti spamovaniu alertu
-      if (nfcLockUntil && now < nfcLockUntil) {
-          return;
-      }
+                                  // ochrana proti spamovaniu alertu
+                                  if (nfcLockUntil && now < nfcLockUntil) {
+                                      return;
+                                  }
 
-      // nastav lock napr. 3 sekundy
-      nfcLockUntil = now + 3000;
+                                  // nastav lock napr. 3 sekundy
+                                  nfcLockUntil = now + 3000;
 
-      alert('Karta neobsahuje dáta (NDEF) potrebné pre IOS. Použite inú kartu alebo kontaktujte technickú podporu.');
+                                  alert('Karta nie zawiera danych (NDEF) wymaganych przez iOS. Użyj innej karty lub skontaktuj się z pomocą techniczną.');
 
-      return;
-  }
-}
+                                  return;
+                              }
+                            }
 
-if (idBytes && idBytes.length) {
+                            if (idBytes && idBytes.length) {
 
-    nfcDebugLog('📦 UID BYTES: ' + JSON.stringify(idBytes));
+                                nfcDebugLog('📦 UID BYTES: ' + JSON.stringify(idBytes));
 
-    finalId = idBytes;
+                                finalId = idBytes;
 
-} else {
-    nfcDebugLog('❌ NO ID FOUND');
-    return;
-}
+                            } else {
+                                nfcDebugLog('❌ NO ID FOUND');
+                                return;
+                            }
 
                             const sendtoEvent = {
                                 tag: {
@@ -1469,13 +1478,13 @@ if (idBytes && idBytes.length) {
 
                         });
                     }
-console.log('[NFC] startScanning CALL');
+                    debugConsole('[NFC] startScanning CALL');
                     await CapacitorNfc.startScanning({
                         invalidateAfterFirstRead: false
                     });
                     scanning = true;
                 } catch (e) {
-                    console.error('[NFC] startScanning error', e);
+                    debugConsole('[NFC] startScanning error', e);
                     throw e;
                 }
             }
@@ -1484,8 +1493,8 @@ console.log('[NFC] startScanning CALL');
                 addTagDiscoveredListener: function (callback, success, failure) {
                 
                 
-                console.log('[NFC DEBUG] addTagDiscoveredListener called');
-                console.trace();
+                debugConsole('[NFC DEBUG] addTagDiscoveredListener called');
+                if (DEBUG_ENABLED) console.trace();
 
                     if (typeof callback !== 'function') {
                         console.warn('[NFC] addTagDiscoveredListener bez callbacku');
@@ -1503,13 +1512,13 @@ console.log('[NFC] startScanning CALL');
                         .then(function () {
                             if (typeof success === 'function') success();
                             if (window.nfcwin && typeof window.nfcwin === 'function') {
-                                try { window.nfcwin(); } catch (e) { console.error(e); }
+                                try { window.nfcwin(); } catch (e) { debugConsole(e); }
                             }
                         })
                         .catch(function (err) {
                             if (typeof failure === 'function') failure(err);
                             if (window.nfcfail && typeof window.nfcfail === 'function') {
-                                try { window.nfcfail(err); } catch (e) { console.error(e); }
+                                try { window.nfcfail(err); } catch (e) { debugConsole(e); }
                             }
                         });
                 },
@@ -1528,7 +1537,7 @@ console.log('[NFC] startScanning CALL');
                             /iPad|iPhone|iPod/.test(navigator.userAgent)
                         ) {
                             CapacitorNfc.stopScanning().catch(function (e) {
-                                console.error('[NFC] stopScanning error', e);
+                                debugConsole('[NFC] stopScanning error', e);
                             });
 
                             scanning = false;
@@ -1537,7 +1546,7 @@ console.log('[NFC] startScanning CALL');
                         if (typeof success === 'function') success();
 
                     } catch (err) {
-                        console.error('[NFC] removeTagDiscoveredListener error', err);
+                        debugConsole('[NFC] removeTagDiscoveredListener error', err);
                     }
                 },
 
@@ -1555,7 +1564,7 @@ console.log('[NFC] startScanning CALL');
         (function () {
             // Ak už existuje pôvodný Cordova plugin, necháme ho tak
             if (window.cordova && window.cordova.plugins && window.cordova.plugins.barcodeScanner) {
-                console.log('[BarcodeScanner] Cordova plugin už existuje, shim nepotrebný.');
+                debugConsole('[BarcodeScanner] Cordova plugin už existuje, shim nepotrebný.');
                 return;
             }
 
@@ -1567,10 +1576,10 @@ console.log('[NFC] startScanning CALL');
             window.cordova.plugins = window.cordova.plugins || {};
 
             if (!CapBarcode || typeof CapBarcode.scan !== 'function') {
-                console.log('[BarcodeScanner] Capacitor BarcodeScanner plugin nie je dostupný, vytváram dummy scan().');
+                debugConsole('[BarcodeScanner] Capacitor BarcodeScanner plugin nie je dostupný, vytváram dummy scan().');
                 window.cordova.plugins.barcodeScanner = {
                     scan: function (success, error, options) {
-                        console.log('[BarcodeScanner] scan volaný bez natívnej podpory.');
+                        debugConsole('[BarcodeScanner] scan volaný bez natívnej podpory.');
                         if (typeof error === 'function') {
                             error('BarcodeScanner plugin nie je dostupný');
                         } else {
@@ -1581,7 +1590,7 @@ console.log('[NFC] startScanning CALL');
                 return;
             }
 
-            console.log('[BarcodeScanner] Používam Capacitor BarcodeScanner plugin ako Cordova shim.');
+            debugConsole('[BarcodeScanner] Používam Capacitor BarcodeScanner plugin ako Cordova shim.');
 
             window.cordova.plugins.barcodeScanner = {
                 scan: function (success, error, options) {
@@ -1607,18 +1616,18 @@ console.log('[NFC] startScanning CALL');
                             }
                         })
                         .catch(function (err) {
-                            console.error('[BarcodeScanner] scan error', err);
+                            debugConsole('[BarcodeScanner] scan error', err);
                             if (typeof error === 'function') {
                                 error(err);
                             } else {
-                                alert('Naskenovanie kódu sa nepodarilo: ' + err);
+                                alert('Nie udało się zeskanować kodu: ' + err);
                             }
                         });
                 }
             };
         })();
         
-        console.log('Plugins:', Capacitor.Plugins);
+        debugConsole('Plugins:', Capacitor.Plugins);
     </script>
 
         <style>
@@ -1697,7 +1706,7 @@ console.log('[NFC] startScanning CALL');
 
         <div align='center'>
             <h2 align='center'>
-                <img src='img/dods.png'><br>
+                <img src='img/logo_codus.png' style='width:200px;'><br>
                 <span id='no_nfc'></span>
                 <span id='logged' align='center'></span>
                 <span id='submenu'></span>
@@ -1724,31 +1733,31 @@ console.log('[NFC] startScanning CALL');
             </div>
 
             <div align='center' id='loggedbutton' class='buttons'>
-                <span id='overidentituOFF'>Senzory karty neaktívne</span>
-                <span id='overidentituON' style='display:none;'><b>Priložte kartu</b> <img src='img/reload.png'></span>
+                <span id='overidentituOFF'>Czytnik kart nieaktywny</span>
+                <span id='overidentituON' style='display:none;'><b>Przyłóż kartę</b> <img src='img/reload.png'></span>
                 <br><br>
                 <div class='zam_button' id='login_code'>
                     <img src='img/tl-prihlaskod.png' class='zam_img'><br>
-                    <span class='zam_text'>Prihlásiť pomocou kódu</span>
+                    <span class='zam_text'>Zaloguj za pomocą kodu</span>
                 </div>
             </div>
 
             <div class='zam_button' id='managebutton' style='display:none;'>
                 <img src='img/tl-spravapristupov.png' class='zam_img'><br>
-                <span class='zam_text'>Správa prístupov</span>
+                <span class='zam_text'>Zarządzanie dostępem</span>
             </div>
 
             <div align='center' id='showmanagebutton' class='buttons' style='display:none;'>
                 <div class='zam_button' id='pridelnfc'>
                     <img src='img/tl-pridelkartu.png' class='zam_img'><br>
-                    <span class='zam_text'>Prideľ kartu</span>
+                    <span class='zam_text'>Przypisz kartę</span>
                 </div>
                 <div id='showpridelnfc' style='display:none;'>
                     <select id='zampridelnfc'></select>
                 </div>
                 <div class='zam_button' id='odobernfc'>
                     <img src='img/tl-odoberkartu.png' class='zam_img'><br>
-                    <span class='zam_text'>Odober kartu</span>
+                    <span class='zam_text'>Usuń kartę</span>
                 </div>
                 <div id='showodobernfc' style='display:none;'>
                     <select id='zamodobernfc'></select>
@@ -1757,14 +1766,14 @@ console.log('[NFC] startScanning CALL');
             </div>
 
             <div align='center' id='showukony' class='buttons' style='display:none;'>
-                <img src='img/delete24.png' alt='X' title='Vynuluj' id='delklient_data' style='display:none;'>
+                <img src='img/delete24.png' alt='X' title='Wyczyść' id='delklient_data' style='display:none;'>
                 <span id='klient_data'></span>
-                <img src='img/delete24.png' alt='X' title='Vynuluj' id='delukon_data' style='display:none;'>
+                <img src='img/delete24.png' alt='X' title='Wyczyść' id='delukon_data' style='display:none;'>
                 <span id='ukon_data'></span><br>
 
                 <div class='zam_button' id='ukon_scan'>
                     <img src='img/tl-prihlaskod.png' class='zam_img'><br>
-                    <span class='zam_text'>Naskenuj kód</span>
+                    <span class='zam_text'>Zeskanuj kod</span>
                 </div>
 
                 <br class='ukon_hodnotabr' style='display:none;'>
@@ -1780,12 +1789,12 @@ console.log('[NFC] startScanning CALL');
                        id='ukon_hodnota2'
                        style='display:none;width:90px;'
                        maxlength='3'>
-                <img src='img/save64.png' alt='Zapíš' id='ukon_hodnota_zapis' style='display:none;'>
+                <img src='img/save64.png' alt='Zapisz' id='ukon_hodnota_zapis' style='display:none;'>
                 <br class='ukon_hodnotabr' style='display:none;'>
 
                 <div class='zam_button' id='ukon_neuz'>
                     <img src='img/tl-neuzavreteukony.png' class='zam_img'><br>
-                    <span class='zam_text'>Neuzavreté úkony</span>
+                    <span class='zam_text'>Niezakończone czynności</span>
                 </div>
                 <div id='showukon_neuz' style='display:none;'></div>
 
@@ -1793,12 +1802,12 @@ console.log('[NFC] startScanning CALL');
 
                 <div class='zam_button' id='ukony' style='display:none;'>
                     <img src='img/tl-zaznamyukonov.png' class='zam_img'><br>
-                    <span class='zam_text'>Záznamy úkonov</span>
+                    <span class='zam_text'>Rejestr czynności</span>
                 </div>
             </div>
 
             <div align='center' class='buttons'>
-                <button id='logout' style='display:none;'>Odhlás</button>
+                <button id='logout' style='display:none;'>Wyloguj</button>
             </div>
 
             <div style='position:absolute;bottom:10px;right:10px;display:none;'>
@@ -1812,5 +1821,3 @@ console.log('[NFC] startScanning CALL');
         <script src="js/index.js"></script>
     </body>
 </html>
-
-

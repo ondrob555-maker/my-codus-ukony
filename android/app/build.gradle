@@ -1,14 +1,14 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "sk.dods.ukony"
+    namespace "sk.codus.ukony"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "sk.dods.ukony"
+        applicationId "sk.codus.ukony"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 60
-        versionName "1.1.6"
+        versionCode 1
+        versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

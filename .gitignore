@@ -5,6 +5,13 @@ android/.gradle/
 dist/
 build/
 zaloha_jks/
+
+# Signing
 android/app/upload-keystore.jks
+android/gradle.properties
+
+# Local backups
+www/index.before-polish*.html
+
 .DS_Store
 *.log

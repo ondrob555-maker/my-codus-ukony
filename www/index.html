@@ -154,12 +154,211 @@
         }
 
 
+        // Skener s automatickým potvrdením po 500 ms súvislej zelenej detekcie.
+        // Rozpoznávajú sa len kódy umiestnené celé v zameriavacom rámčeku.
+        let manualBarcodeBusy = false;
+
+        function barcodeInsideTarget(barcode, target) {
+            const points = barcode && barcode.cornerPoints;
+            if (!Array.isArray(points) || points.length !== 4 ||
+                !points.every(p => Array.isArray(p) && p.length === 2 &&
+                    Number.isFinite(p[0]) && Number.isFinite(p[1]))) return false;
+
+            const rect = target.getBoundingClientRect();
+            const scale = window.devicePixelRatio || 1;
+            const inset = 5;
+            return points.every(p => {
+                const x = p[0] / scale;
+                const y = p[1] / scale;
+                return x >= rect.left + inset && x <= rect.right - inset &&
+                       y >= rect.top + inset && y <= rect.bottom - inset;
+            });
+        }
+
+        async function scanBarcodeWithConfirmation() {
+            const BarcodeScanner = getBarcodeScannerPlugin();
+            if (!BarcodeScanner) throw new Error('Wtyczka BarcodeScanner nie jest dostępna.');
+            if (typeof BarcodeScanner.startScan !== 'function' ||
+                typeof BarcodeScanner.addListener !== 'function' ||
+                typeof BarcodeScanner.stopScan !== 'function') {
+                throw new Error('Zainstalowany skaner nie obsługuje trybu ręcznego.');
+            }
+            if (manualBarcodeBusy) return { barcodes: [] };
+            manualBarcodeBusy = true;
+            let listener = null;
+            let errListener = null;
+            let started = false;
+            let finished = false;
+            let candidate = '';
+            let hits = 0;
+            let lastSeenAt = 0;
+            let greenSince = 0;
+            let staleTimer = null;
+            let resolveChoice;
+            const choice = new Promise(resolve => { resolveChoice = resolve; });
+
+            const overlay = document.createElement('div');
+            overlay.id = 'manual-barcode-overlay';
+            overlay.innerHTML =
+                '<button type="button" id="manual-barcode-close" aria-label="Zamknij skaner">&times;</button>' +
+                '<button type="button" id="manual-barcode-torch" aria-label="Zapal światło" aria-pressed="false" hidden>' +
+                    '<svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+                        '<path d="m9 2 6 0 1 7-8 0 1-7Z M8 9l8 0-2 5H10L8 9Z M12 17v2 M5 16l-2 2 M19 16l2 2 M4 11H2 M22 11h-2"/>' +
+                    '</svg>' +
+                '</button>' +
+                '<div class="manual-barcode-target manual-barcode-target-waiting"></div>';
+            const target = overlay.querySelector('.manual-barcode-target');
+            const close = overlay.querySelector('#manual-barcode-close');
+            const torchButton = overlay.querySelector('#manual-barcode-torch');
+            let torchEnabled = false;
+            let torchBusy = false;
+
+            function updateTorchButton() {
+                torchButton.setAttribute('aria-pressed', String(torchEnabled));
+                torchButton.setAttribute('aria-label', torchEnabled ? 'Zgaś światło' : 'Zapal światło');
+                torchButton.classList.toggle('is-on', torchEnabled);
+            }
+
+            torchButton.addEventListener('click', async () => {
+                if (!started || finished || torchBusy) return;
+                torchBusy = true;
+                try {
+                    if (torchEnabled) {
+                        await BarcodeScanner.disableTorch();
+                    } else {
+                        await BarcodeScanner.enableTorch();
+                    }
+                    torchEnabled = !torchEnabled;
+                    updateTorchButton();
+                } catch (e) {
+                    debugConsole('[BARCODE] torch error', e);
+                } finally {
+                    torchBusy = false;
+                }
+            });
+
+            function resetTarget() {
+                candidate = '';
+                hits = 0;
+                lastSeenAt = 0;
+                greenSince = 0;
+                target.classList.remove('manual-barcode-target-ready');
+                target.classList.add('manual-barcode-target-waiting');
+                if (staleTimer) clearTimeout(staleTimer);
+                staleTimer = null;
+            }
+
+            function settle(value) {
+                if (finished) return;
+                finished = true;
+                if (staleTimer) clearTimeout(staleTimer);
+                resolveChoice(value ? { barcodes: [{ rawValue: value }] } : { barcodes: [] });
+            }
+
+            close.addEventListener('click', () => settle(null));
+            document.body.appendChild(overlay);
+            document.documentElement.classList.add('manual-barcode-active');
+
+            try {
+                const perm = await BarcodeScanner.requestPermissions();
+                const camera = perm && perm.camera;
+                if (camera !== 'granted' && camera !== 'limited') {
+                    alert('Zezwól na dostęp do aparatu w ustawieniach aplikacji.');
+                    return { barcodes: [] };
+                }
+                listener = await BarcodeScanner.addListener('barcodesScanned', event => {
+                    if (finished) return;
+                    const insideValues = new Set();
+                    for (const item of (event && event.barcodes || [])) {
+                        if (!barcodeInsideTarget(item, target)) continue;
+                        const value = item.rawValue || item.displayValue || '';
+                        if (value) insideValues.add(value);
+                    }
+
+                    // Žiaden kód alebo viac než jeden v rámčeku: zrušiť zelenú i odpočet.
+                    if (insideValues.size !== 1) {
+                        resetTarget();
+                        return;
+                    }
+
+                    const value = insideValues.values().next().value;
+                    const now = Date.now();
+                    // Po strate spojitej detekcie ani nový kód nesmie zdediť odpočet.
+                    if (value !== candidate || now - lastSeenAt > 350) {
+                        resetTarget();
+                        candidate = value;
+                        hits = 1;
+                        lastSeenAt = now;
+                    } else {
+                        hits += 1;
+                        lastSeenAt = now;
+                        if (hits >= 2 && !greenSince) {
+                            greenSince = now;
+                            target.classList.remove('manual-barcode-target-waiting');
+                            target.classList.add('manual-barcode-target-ready');
+                        }
+                        // Potvrdenie prebehne iba pri novom platnom zábere po 500 ms
+                        // nepretržitej zelenej detekcie, nikdy nie zo starého časovača.
+                        if (greenSince && now - greenSince >= 500) {
+                            settle(value);
+                            return;
+                        }
+                    }
+
+                    if (staleTimer) clearTimeout(staleTimer);
+                    staleTimer = setTimeout(() => {
+                        if (!finished && Date.now() - lastSeenAt >= 350) resetTarget();
+                    }, 370);
+                });
+                errListener = await BarcodeScanner.addListener('scanError', event => {
+                    debugConsole('[BARCODE] scanError', event);
+                    resetTarget();
+                });
+                await BarcodeScanner.startScan();
+                started = true;
+                // Tlačidlo svetla zobrazíme len na zariadení s podporovanou baterkou.
+                try {
+                    if (!finished && typeof BarcodeScanner.isTorchAvailable === 'function' &&
+                        typeof BarcodeScanner.enableTorch === 'function' &&
+                        typeof BarcodeScanner.disableTorch === 'function') {
+                        const support = await BarcodeScanner.isTorchAvailable();
+                        torchButton.hidden = !support || !support.available;
+                        if (!torchButton.hidden && typeof BarcodeScanner.isTorchEnabled === 'function') {
+                            const state = await BarcodeScanner.isTorchEnabled();
+                            torchEnabled = !!(state && state.enabled);
+                            updateTorchButton();
+                        }
+                    }
+                } catch (e) {
+                    debugConsole('[BARCODE] torch availability error', e);
+                    torchButton.hidden = true;
+                }
+                return await choice;
+            } finally {
+                if (staleTimer) clearTimeout(staleTimer);
+                if (started) {
+                    try {
+                        // Pri zatvorení vždy zhasnúť svetlo, aby nezostalo zapnuté.
+                        if (typeof BarcodeScanner.disableTorch === 'function') {
+                            await BarcodeScanner.disableTorch();
+                        }
+                    } catch (e) { debugConsole('[BARCODE] disableTorch', e); }
+                    try { await BarcodeScanner.stopScan(); } catch (e) { debugConsole('[BARCODE] stopScan', e); }
+                }
+                if (listener) { try { await listener.remove(); } catch (e) {} }
+                if (errListener) { try { await errListener.remove(); } catch (e) {} }
+                overlay.remove();
+                document.documentElement.classList.remove('manual-barcode-active');
+                manualBarcodeBusy = false;
+            }
+        }
+        
         window.onload = function() {
         
         prepareBarcodeScanner();
         
-            let APP_VERSION = '1.0.1(codus-ukony)';
-            if (isIOS) APP_VERSION = '1.0.1(codus-ukony)-ios';
+            let APP_VERSION = '1.1.1(codus-ukony)';
+            if (isIOS) APP_VERSION = '1.1.1(codus-ukony)-ios';
             
             document.getElementById('appVersion').textContent = 'v. '+APP_VERSION.split('(')[0].trim();
 
@@ -335,7 +534,7 @@
                 var tagId = nfc.bytesToHexString(tag.id);
                 $.ajax({
                     type: "POST",
-                    url:  "https://codu2.let.is/app_load.php",
+                    url:  "https://codu.let.is/app_load.php",
                     data: { co: 'add_nfc', kto: $('#zampridelnfc').val(), kod: tagId },
                     cache: false,
                     dataType: "text",
@@ -407,7 +606,7 @@
                 } else {
                     $.ajax({
                         type: "POST",
-                        url:  "https://codu2.let.is/app_load.php",
+                        url:  "https://codu.let.is/app_load.php",
                         data: { co: 'over_nfc', kod: tagId },
                         cache: false,
                         dataType: "text",
@@ -443,7 +642,7 @@
                 $("#showukon_neuz").html('<br><b>Wczytywanie...</b>');
                 $.ajax({
                     type: "POST",
-                    url:  "https://codu2.let.is/app_load.php",
+                    url:  "https://codu.let.is/app_load.php",
                     data: { co: 'loadukonneuz', konto: konto, kto: zamestnanec, klient: ukon_klient, ukon: ukon_id },
                     cache: false,
                     dataType: "text",
@@ -480,7 +679,7 @@
                 $("#loaddata").html("<br>Wczytywanie danych... <img src='img/time.png' alt='?'>");
                 $.ajax({
                     type: "POST",
-                    url:  "https://codu2.let.is/app_load.php",
+                    url:  "https://codu.let.is/app_load.php",
                     data: { co: 'loadcodes', konto: konto },
                     cache: false,
                     dataType: "text",
@@ -568,7 +767,7 @@
                 if (codes!='') {
                     $.ajax({
                         type: "POST",
-                        url:  "https://codu2.let.is/app_load.php",
+                        url:  "https://codu.let.is/app_load.php",
                         data: { co: 'save_kody', konto: konto, kto: zamestnanec, kody: codes },
                         cache: false,
                         dataType: "text",
@@ -666,7 +865,7 @@
                 }
 
                 // 2) Samotné skenovanie – náhrada za cordova.plugins.barcodeScanner.scan(...)
-                const result = await BarcodeScanner.scan();
+                const result = await scanBarcodeWithConfirmation();
                 const first = result && result.barcodes && result.barcodes[0];
 
                 // Pôvodne: if (!result.cancelled) { ... }
@@ -793,7 +992,7 @@
                   // ONLINE vetva – AJAX úplne rovnaký, len kod: scannedCode
                   $.ajax({
                     type: "POST",
-                    url: "https://codu2.let.is/app_load.php",
+                    url: "https://codu.let.is/app_load.php",
                     data: {
                       co: "save_kody_one",
                       konto: konto,
@@ -904,7 +1103,7 @@
                 $('#showukon_neuz').hide();
                 $.ajax({
                     type: "POST",
-                    url:  "https://codu2.let.is/app_load.php",
+                    url:  "https://codu.let.is/app_load.php",
                     data: { co: 'save_kody_hodnota', konto: konto, kto: zamestnanec, klient: ukon_klient, ukon: ukon_id, hodnota1: $("#ukon_hodnota1").val(), hodnota2: $("#ukon_hodnota2").val() },
                     cache: false,
                     dataType: "text",
@@ -954,7 +1153,7 @@
                     $("#showodobernfc").hide();
                     $.ajax({
                         type: "POST",
-                        url:  "https://codu2.let.is/app_load.php",
+                        url:  "https://codu.let.is/app_load.php",
                         data: { co: 'users_nfc', konto: konto },
                         cache: false,
                         dataType: "text",
@@ -994,7 +1193,7 @@
                     $("#showpridelnfc").hide();
                     $.ajax({
                         type: "POST",
-                        url:  "https://codu2.let.is/app_load.php",
+                        url:  "https://codu.let.is/app_load.php",
                         data: { co: 'del_users_nfc', konto: konto },
                         cache: false,
                         dataType: "text",
@@ -1038,7 +1237,7 @@
             $('#clickodobernfc').click(function() {
                 $.ajax({
                     type: "POST",
-                    url:  "https://codu2.let.is/app_load.php",
+                    url:  "https://codu.let.is/app_load.php",
                     data: { co: 'del_nfc', kto: $('#zamodobernfc').val() },
                     cache: false,
                     dataType: "text",
@@ -1215,7 +1414,7 @@
                         }
 
                         // 2) Samotné skenovanie
-                        const result = await BarcodeScanner.scan();
+                        const result = await scanBarcodeWithConfirmation();
                         const first = result && result.barcodes && result.barcodes[0];
 
                         if (!first) {
@@ -1240,7 +1439,7 @@
                         //
                         $.ajax({
                             type: "POST",
-                            url: "https://codu2.let.is/app_load.php",
+                            url: "https://codu.let.is/app_load.php",
                             data: { co: "over_kod", kod: scannedCode },
                             cache: false,
                             dataType: "text",
@@ -1718,6 +1917,52 @@
           bottom:40px;
           margin:auto !important;
         }
+        /* Vlastná kamera pre manuálne potvrdenie čiarového kódu. */
+        html.manual-barcode-active,
+        html.manual-barcode-active body { background: transparent !important; }
+        html.manual-barcode-active body > *:not(#manual-barcode-overlay) {
+            visibility: hidden !important;
+        }
+        #manual-barcode-overlay {
+            position: fixed; inset: 0; z-index: 2147483647;
+            visibility: visible !important;
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center;
+            padding: calc(env(safe-area-inset-top, 0px) + 22px) 18px
+                     calc(env(safe-area-inset-bottom, 0px) + 24px);
+            box-sizing: border-box; font-family: Arial, sans-serif;
+            color: white; text-align: center;
+            background: transparent !important;
+        }
+        .manual-barcode-target { width: min(88vw, 430px); aspect-ratio: 4 / 3; height: auto;
+            border: 3px solid #d93f3f; border-radius: 15px;
+            box-shadow: 0 0 0 100vmax rgba(0,0,0,.16);
+            display: flex; align-items: flex-end; justify-content: center;
+            box-sizing: border-box; transition: border-color .15s ease, box-shadow .15s ease; }
+        .manual-barcode-target.manual-barcode-target-waiting {
+            border-color: #d93f3f;
+        }
+        .manual-barcode-target.manual-barcode-target-ready {
+            border-color: #32e88c;
+            box-shadow: 0 0 0 100vmax rgba(0,0,0,.16), 0 0 0 4px rgba(50,232,140,.18);
+        }
+        #manual-barcode-close {
+            position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); left: 16px;
+            display: flex; align-items: center; justify-content: center;
+            width: 46px; height: 46px; border: 0; border-radius: 50%;
+            background: rgba(0,0,0,.65); color: #fff; font-size: 34px;
+            font-weight: 400; line-height: 1; z-index: 1; cursor: pointer;
+        }
+        #manual-barcode-torch {
+            position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); right: 16px;
+            align-items: center; justify-content: center;
+            width: 46px; height: 46px; border: 0; border-radius: 50%;
+            background: rgba(0,0,0,.65); color: #fff;
+            z-index: 1; cursor: pointer;
+        }
+        #manual-barcode-torch:not([hidden]) { display: flex; }
+        #manual-barcode-torch[hidden] { display: none !important; }
+        #manual-barcode-torch.is-on { background: #f3d24f; color: #222; }
         </style>
 
         <div align='center'>
@@ -1834,6 +2079,7 @@
             </div>
             <div id='appVersion' style='position:fixed; float: right; bottom:20px; right:20px;'></div>
         </div>
+        
         <script src="js/index.js"></script>
     </body>
 </html>

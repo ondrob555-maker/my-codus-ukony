@@ -30,10 +30,10 @@ var app = {
             if (input) {
                 input.focus();
             } else {
-                console.log('[app] �iadny input na fokus nena�iel.');
+                debugConsole('[app] �iadny input na fokus nena�iel.');
             }
         } catch (e) {
-            console.warn('[app] Chyba pri focus():', e);
+            debugConsole('[app] Chyba pri focus():', e);
         }
 
         // sem pr�padne vie� doplni� �al�ie veci, �o si mal kedysi v deviceready
@@ -44,7 +44,7 @@ var app = {
         var parentElement = document.getElementById(id);
 
         if (!parentElement) {
-            console.log('[app] receivedEvent("' + id + '") � element #' + id + ' neexistuje, UI toggle preskakujem.');
+            debugConsole('[app] receivedEvent("' + id + '") � element #' + id + ' neexistuje, UI toggle preskakujem.');
             return;
         }
 
@@ -58,7 +58,7 @@ var app = {
             receivedElement.style.display = 'block';
         }
 
-        console.log('Received Event: ' + id);
+        debugConsole('Received Event: ' + id);
     }
 };
 

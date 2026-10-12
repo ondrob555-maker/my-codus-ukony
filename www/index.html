@@ -357,8 +357,8 @@
         
         prepareBarcodeScanner();
         
-            let APP_VERSION = '1.1.1(codus-ukony)';
-            if (isIOS) APP_VERSION = '1.1.1(codus-ukony)-ios';
+            let APP_VERSION = '1.1.2(codus-ukony)';
+            if (isIOS) APP_VERSION = '1.1.2(codus-ukony)-ios';
             
             document.getElementById('appVersion').textContent = 'v. '+APP_VERSION.split('(')[0].trim();
 
@@ -791,7 +791,53 @@
                 }
             });
 
-            $('input[type=radio][name=offline]').change(function() {
+            // Upozornenie pri opustení neodoslaných offline záznamov.
+            // Potvrdenie znamená vedomé zahodenie kódov (pôvodné správanie).
+            function confirmDiscardOfflineCodes(actionLabel) {
+                if (!codes || !codes.trim()) return Promise.resolve(true);
+                return new Promise(function(resolve) {
+                    const dialog = document.createElement('div');
+                    dialog.id = 'offline-unsaved-dialog';
+                    dialog.innerHTML =
+                        '<div class="offline-unsaved-panel" role="alertdialog" aria-modal="true" ' +
+                        'aria-labelledby="offline-unsaved-title" aria-describedby="offline-unsaved-message">' +
+                        '<h3 id="offline-unsaved-title">Uwaga, niewysłane dane!</h3>' +
+                        '<p id="offline-unsaved-message">Masz zeskanowane kody w trybie offline, które nie zostały jeszcze wysłane na serwer. ' +
+                        'Jeśli będziesz kontynuować, kody te zostaną utracone. Zalecamy najpierw je wysłać.</p>' +
+                        '<div class="offline-unsaved-actions">' +
+                        '<button type="button" id="offline-unsaved-stay">Pozostań</button>' +
+                        '<button type="button" id="offline-unsaved-discard"></button>' +
+                        '</div></div>';
+                    document.body.appendChild(dialog);
+                    const stay = dialog.querySelector('#offline-unsaved-stay');
+                    const discard = dialog.querySelector('#offline-unsaved-discard');
+                    discard.textContent = actionLabel || 'Kontynuuj mimo to';
+                    const finish = function(value) {
+                        document.removeEventListener('keydown', onKey, true);
+                        dialog.remove();
+                        resolve(value);
+                    };
+                    const onKey = function(event) {
+                        if (event.key === 'Escape') {
+                            event.preventDefault();
+                            finish(false);
+                        }
+                    };
+                    document.addEventListener('keydown', onKey, true);
+                    stay.addEventListener('click', function() { finish(false); });
+                    discard.addEventListener('click', function() { finish(true); });
+                    stay.focus();
+                });
+            }
+
+            let lastOfflineMode = $('input[name=offline]:checked').val();
+            $('input[type=radio][name=offline]').change(async function() {
+                const newMode = this.value;
+                if (!(await confirmDiscardOfflineCodes())) {
+                    $('input[name=offline][value="' + lastOfflineMode + '"]').prop('checked', true);
+                    return;
+                }
+                lastOfflineMode = newMode;
                 const klienti_names = [];
                 const ukony_names = [];
                 const ukony_hodns = [];
@@ -1256,7 +1302,8 @@
                 });
             });
 
-            $('#navrat').click(function() {
+            $('#navrat').click(async function() {
+                if (!(await confirmDiscardOfflineCodes())) return;
                 $("#submenu").text('');
                 $('#showoffline').hide();
                 if (app_manage==1) { $('#managebutton').show(); }
@@ -1282,7 +1329,8 @@
                 $("#delukon_data").hide();
             });
 
-            $('#logout').click(function() {
+            $('#logout').click(async function() {
+                if (!(await confirmDiscardOfflineCodes('Aj tak odhlásiť'))) return;
                 zamestnanec='';
                 konto=0;
                 $("#submenu").text('');
@@ -1963,6 +2011,26 @@
         #manual-barcode-torch:not([hidden]) { display: flex; }
         #manual-barcode-torch[hidden] { display: none !important; }
         #manual-barcode-torch.is-on { background: #f3d24f; color: #222; }
+        #offline-unsaved-dialog {
+            position: fixed; inset: 0; z-index: 2147483647;
+            display: flex; align-items: center; justify-content: center;
+            padding: 18px; box-sizing: border-box;
+            background: rgba(0,0,0,.65);
+        }
+        #offline-unsaved-dialog .offline-unsaved-panel {
+            width: 100%; max-width: 430px; box-sizing: border-box;
+            padding: 22px; border-radius: 15px; background: #fff;
+            color: #202020; text-align: left; font-family: Arial, sans-serif;
+        }
+        #offline-unsaved-dialog h3 { margin: 0 0 12px; font-size: 20px; }
+        #offline-unsaved-dialog p { margin: 0 0 20px; font-size: 16px; line-height: 1.5; }
+        #offline-unsaved-dialog .offline-unsaved-actions { display: flex; gap: 10px; }
+        #offline-unsaved-dialog button {
+            flex: 1; min-height: 48px; padding: 9px; border: 0;
+            border-radius: 9px; font-size: 14px; cursor: pointer;
+        }
+        #offline-unsaved-stay { background: #1763cf; color: white; }
+        #offline-unsaved-discard { background: #e9e9e9; color: #222; }
         </style>
 
         <div align='center'>
